@@ -170,6 +170,11 @@ Parquet 文件通常包含以下字段：
 | `labels` | 故障类别标签；部分预训练数据可能不包含该字段 |
 | `dataset` | 数据集或划分标识 |
 
+## Mixup 数据增强
+
+`mixup.py` 可基于 `Process_Data` 中已有的预训练数据集生成两两组合的 mixup Parquet 文件，默认输出到 `Process_Data/mixed/`。
+运行 `python mixup.py` 即可使用默认数据集组合，也可通过 `--datasets CWRU TORINO --max-samples 100` 指定数据集和样本数量。
+
 ## 新增数据集
 
 每个数据集脚本需要在文件顶部提供 `DATASET_CONFIG`，用于声明入口类或函数、任务类型、原始目录候选名和输出目录名。
