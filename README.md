@@ -53,6 +53,7 @@ huggingface-cli download bojian1/PHMFD-data \
 | `MFPT` | `MFPT` | `MFPT` | pretrain |
 | `PU` | `PU`, `RM_027_PU` | `PU` | finetune |
 | `TORINO` | `DIRG`, `TORINO` | `TORINO` | pretrain |
+| `UO` | `UO`, `UniFault_rawdata/UO` | `UO` | pretrain |
 | `XJTUSY` | `XJTU-SY`, `XJTUSY` | `XJTUSY` | pretrain |
 
 `main.py` 会在候选原始目录中优先使用实际存在的目录。`KAIST` 会根据原始数据中的完整 CSV 子集自动生成 `KAIST1`、`KAIST2` 等输出目录。
@@ -173,7 +174,7 @@ Parquet 文件通常包含以下字段：
 ## Mixup 数据增强
 
 `mixup.py` 可基于 `Process_Data` 中已有的预训练数据集生成两两组合的 mixup Parquet 文件，默认输出到 `Process_Data/mixed/`。
-运行 `python mixup.py` 即可使用默认数据集组合，也可通过 `--datasets CWRU TORINO --max-samples 100` 指定数据集和样本数量。
+运行 `python mixup.py` 即可使用默认数据集组合，也可通过 `--datasets CWRU TORINO --max-samples 100` 指定数据集和样本数量；加上 `--skip-existing` 可跳过输出目录中已经存在的组合文件。
 
 ## 新增数据集
 

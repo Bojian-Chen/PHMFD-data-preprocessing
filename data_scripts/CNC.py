@@ -10,9 +10,6 @@ import pyarrow.parquet as pq
 from scipy.signal import resample as scipy_resample
 
 
-DATASET_NAME = "CNC"
-DEFAULT_RAW_DIR = Path("Raw_data") / "CNC"
-DEFAULT_SAVE_DIR = Path("Process_Data") / "CNC"
 DATASET_CONFIG = {
     "target": "PrepareCNC",
     "method": "prepare_dataset",
@@ -25,8 +22,8 @@ DATASET_CONFIG = {
 class PrepareCNC:
     def __init__(
         self,
-        raw_dir=DEFAULT_RAW_DIR,
-        save_dir=DEFAULT_SAVE_DIR,
+        raw_dir=None,
+        save_dir=None,
         sample_time=0.1,
         sampling_frequency=2000,
         norm_method="none",
@@ -34,8 +31,9 @@ class PrepareCNC:
         seed=42,
         fewshot_seed=20260504,
     ):
-        self.raw_dir = Path(raw_dir)
-        self.save_dir = Path(save_dir)
+        self.dataset_name = DATASET_CONFIG["save_folder"]
+        self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
+        self.save_dir = Path(save_dir) if save_dir is not None else default_save_dir()
         self.sample_time = sample_time
         self.sampling_frequency = sampling_frequency
         self.window_size = int(round(sampling_frequency * sample_time))
@@ -67,12 +65,12 @@ class PrepareCNC:
             save_parquet(
                 split_samples,
                 split_labels,
-                DATASET_NAME,
+                self.dataset_name,
                 machine_save_dir / f"{split_name}.parquet",
             )
 
         print(
-            f"{DATASET_NAME} {machine}: saved train_1p={len(split_indices['train_1p'])}, "
+            f"{self.dataset_name} {machine}: saved train_1p={len(split_indices['train_1p'])}, "
             f"val={len(split_indices['val'])}, test={len(split_indices['test'])} "
             f"to {machine_save_dir}"
         )
@@ -297,13 +295,19 @@ def save_parquet(samples, labels, dataset_name, save_path):
     pq.write_table(pa.Table.from_pandas(df), save_path)
 
 
+def default_raw_dir():
+    return Path("Raw_data") / DATASET_CONFIG["raw_folders"][0]
+
+
+def default_save_dir():
+    return Path("Process_Data") / DATASET_CONFIG["save_folder"]
+
+
 Prepare_CNC = PrepareCNC
 
 
 if __name__ == "__main__":
     dataset = PrepareCNC(
-        raw_dir=DEFAULT_RAW_DIR,
-        save_dir=DEFAULT_SAVE_DIR,
         sample_time=0.1,
         sampling_frequency=2000,
         norm_method="minmax",

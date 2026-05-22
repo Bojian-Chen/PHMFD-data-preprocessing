@@ -9,6 +9,7 @@ import torch
 
 
 DEFAULT_DATASETS = (
+    "UO",
     "HITSM/HITSM_self_built",
     "HITSM/HITSM_SpectraQuest",
     "KAIST1",
@@ -76,11 +77,15 @@ def write_mixed_pair(
     batch_size,
     temporal_shift,
     max_samples=None,
+    skip_existing=False,
 ):
     data_id1 = dataset_id_from_train_file(file1, data_root)
     data_id2 = dataset_id_from_train_file(file2, data_root)
     dataset_name = f"mixup_{data_id1}_{data_id2}"
     output_file = output_dir / f"{dataset_name}.parquet"
+    if skip_existing and output_file.exists():
+        print(f"Skipped existing mixup file: {output_file}")
+        return
 
     x1 = load_parquet(file1)
     x2 = load_parquet(file2)
@@ -164,6 +169,7 @@ def perform_mixup_on_files(
     batch_size,
     temporal_shift,
     max_samples=None,
+    skip_existing=False,
 ):
     if len(file_paths) < 2:
         raise ValueError("At least two available train files are required for mixup.")
@@ -178,6 +184,7 @@ def perform_mixup_on_files(
             batch_size,
             temporal_shift,
             max_samples=max_samples,
+            skip_existing=skip_existing,
         )
 
 
@@ -215,6 +222,11 @@ def build_parser():
         action="store_true",
         help="Only print resolved input and output paths.",
     )
+    parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip a dataset pair when its output parquet already exists.",
+    )
     return parser
 
 
@@ -240,6 +252,7 @@ def main():
         batch_size=args.batch_size,
         temporal_shift=args.temporal_shift,
         max_samples=args.max_samples,
+        skip_existing=args.skip_existing,
     )
 
 

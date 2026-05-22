@@ -8,6 +8,7 @@ DATASET_MODULES = (
     "MFPT",
     "PU",
     "TORINO",
+    "UO",
     "XJTUSY",
 )
 

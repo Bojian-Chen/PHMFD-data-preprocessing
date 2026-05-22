@@ -6,7 +6,7 @@ from pathlib import Path
 from data_scripts import DATASET_ALIASES, DATASET_MODULES
 
 
-DEFAULT_RAW_ROOT = Path("Raw_data/UniFault")
+DEFAULT_RAW_ROOT = Path("Raw_data/UniFault_rawdata")
 DEFAULT_SAVE_ROOT = Path("Process_Data")
 DEFAULT_SAMPLE_TIME = 0.1
 DEFAULT_NORM_METHOD = "none"
