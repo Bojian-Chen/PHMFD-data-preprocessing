@@ -5,3 +5,4 @@ Raw_data/*
 *.ipynb
 dataset_analysis_reports
 *.pyc
+hf_upload/
