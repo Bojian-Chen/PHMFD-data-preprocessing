@@ -152,6 +152,13 @@ DATASET_CONFIG = {
 2. 在脚本中添加 `DATASET_CONFIG`。
 3. 在 `data_scripts/__init__.py` 的 `DATASET_MODULES` 中注册模块名。
 
+`data_scripts/` 下提供了两个扩展示例：
+
+- `example_pretrain.py`：pretrain 数据集模板，输出 `train.parquet`、`val.parquet`、`test.parquet`。
+- `example_finetune.py`：finetune 数据集模板，输出 `train_1p.parquet`、`val.parquet`、`test.parquet`，并演示 `fewshot_seed` 的使用。
+
+这两个示例默认不注册到 `DATASET_MODULES`，因此不会被 `python main.py --datasets all` 执行。扩展新数据集时，可以复制其中一个模板，改成真实的数据读取逻辑，然后再注册模块名。
+
 ## Finetune 数据集
 
 当前显式标记为 finetune 的数据集是：

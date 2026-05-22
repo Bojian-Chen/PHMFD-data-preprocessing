@@ -169,23 +169,23 @@ def build_parser():
     parser.add_argument("--sample-time", type=float, help="Window length in seconds.")
     parser.add_argument(
         "--norm-method",
-        default=DEFAULT_NORM_METHOD,
+        default="minmax",
         help="Normalization method: none, minmax, zscore.",
     )
     parser.add_argument(
         "--resampled-size",
         type=parse_optional_int,
-        default=argparse.SUPPRESS,
+        default=1024,
         help="Target sample length. Use 'none' to disable resampling.",
     )
     parser.add_argument("--train-size", type=float, default=0.6)
     parser.add_argument("--val-size", type=float, default=0.2)
     parser.add_argument("--test-size", type=float, default=0.2)
-    parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--fewshot-seed",
         type=int,
-        default=DEFAULT_FEWSHOT_SEED,
+        default=42,
         help="Seed for finetune few-shot sampling when the dataset supports it.",
     )
     parser.add_argument(
