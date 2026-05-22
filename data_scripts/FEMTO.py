@@ -9,12 +9,21 @@ import torch
 from scipy.signal import resample
 
 
+DATASET_CONFIG = {
+    "target": "FEMTO_pretrain",
+    "method": "process_data",
+    "task": "pretrain",
+    "raw_folders": ("FEMTO",),
+    "save_folder": "FEMTO",
+}
+
+
 class FEMTO_pretrain:
     def __init__(
         self,
         args=None,
-        data_dir=r"H:\PHMFD_rawdata\UniFault\FEMTO",
-        save_dir=r"H:\PHMFD_data_all\FEMTO",
+        data_dir=Path("Raw_data") / "FEMTO",
+        save_dir=Path("Process_Data") / "FEMTO",
         desired_duration_sec=0.1,
         sampling_frequency=25600,
         resampled_size=None,
@@ -25,10 +34,14 @@ class FEMTO_pretrain:
         seed=42,
     ) -> None:
         if args is not None:
-            data_dir = Path(getattr(args, "raw_dir", r"H:\PHMFD_rawdata\UniFault")) / "FEMTO"
-            save_dir = Path(getattr(args, "processed_dir", r"H:\PHMFD_data_all")) / "FEMTO"
+            data_dir = Path(getattr(args, "raw_dir", Path("Raw_data"))) / "FEMTO"
+            save_dir = (
+                Path(getattr(args, "processed_dir", Path("Process_Data"))) / "FEMTO"
+            )
             norm_method = getattr(args, "norm_method", norm_method)
-            desired_duration_sec = getattr(args, "desired_duration_sec", desired_duration_sec)
+            desired_duration_sec = getattr(
+                args, "desired_duration_sec", desired_duration_sec
+            )
             sampling_frequency = getattr(args, "sampling_frequency", sampling_frequency)
             resampled_size = getattr(args, "resampled_size", resampled_size)
             train_size = getattr(args, "train_size", train_size)
@@ -40,9 +53,13 @@ class FEMTO_pretrain:
         self.parquet_save_path = Path(save_dir)
         self.desired_duration_sec = float(desired_duration_sec)
         self.sampling_frequency = int(sampling_frequency)
-        self.window_size = int(round(self.sampling_frequency * self.desired_duration_sec))
+        self.window_size = int(
+            round(self.sampling_frequency * self.desired_duration_sec)
+        )
         self.stride = self.window_size
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.norm_method = self._normalize_norm_name(norm_method)
         self.train_size = float(train_size)
         self.val_size = float(val_size)
@@ -57,9 +74,23 @@ class FEMTO_pretrain:
             raise ValueError("train_size + val_size + test_size must equal 1.0.")
 
         self.bearing_names = [
-            "Bearing1_1", "Bearing1_2", "Bearing1_3", "Bearing1_4", "Bearing1_5", "Bearing1_6", "Bearing1_7",
-            "Bearing2_1", "Bearing2_2", "Bearing2_3", "Bearing2_4", "Bearing2_5", "Bearing2_6", "Bearing2_7",
-            "Bearing3_1", "Bearing3_2", "Bearing3_3",
+            "Bearing1_1",
+            "Bearing1_2",
+            "Bearing1_3",
+            "Bearing1_4",
+            "Bearing1_5",
+            "Bearing1_6",
+            "Bearing1_7",
+            "Bearing2_1",
+            "Bearing2_2",
+            "Bearing2_3",
+            "Bearing2_4",
+            "Bearing2_5",
+            "Bearing2_6",
+            "Bearing2_7",
+            "Bearing3_1",
+            "Bearing3_2",
+            "Bearing3_3",
         ]
         self.bearing_source_dirs = {
             "Bearing1_1": "Learning_set",
@@ -89,17 +120,33 @@ class FEMTO_pretrain:
         test = self.resample_dataset(self.normalize_dataset(test))
 
         self.parquet_save_path.mkdir(parents=True, exist_ok=True)
-        save_parquet(train["samples"].squeeze(1).numpy(), "train", self.parquet_save_path / "train.parquet")
-        save_parquet(val["samples"].squeeze(1).numpy(), "val", self.parquet_save_path / "val.parquet")
-        save_parquet(test["samples"].squeeze(1).numpy(), "test", self.parquet_save_path / "test.parquet")
+        save_parquet(
+            train["samples"].squeeze(1).numpy(),
+            "train",
+            self.parquet_save_path / "train.parquet",
+        )
+        save_parquet(
+            val["samples"].squeeze(1).numpy(),
+            "val",
+            self.parquet_save_path / "val.parquet",
+        )
+        save_parquet(
+            test["samples"].squeeze(1).numpy(),
+            "test",
+            self.parquet_save_path / "test.parquet",
+        )
 
         print(f"FEMTO pretrain saved to {self.parquet_save_path}")
-        print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+        print(
+            f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+        )
         return train, val, test
 
     def build_pretrain_samples(self):
         if not self.folder_path.exists():
-            raise FileNotFoundError(f"FEMTO data directory does not exist: {self.folder_path}")
+            raise FileNotFoundError(
+                f"FEMTO data directory does not exist: {self.folder_path}"
+            )
 
         samples = []
         missing_dirs = []
@@ -145,7 +192,9 @@ class FEMTO_pretrain:
         for channel_signal in signal:
             if channel_signal.numel() < self.window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=self.window_size, step=self.stride)
+            windows = channel_signal.unfold(
+                dimension=0, size=self.window_size, step=self.stride
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, self.window_size), dtype=torch.float32)
@@ -162,8 +211,12 @@ class FEMTO_pretrain:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -188,7 +241,11 @@ class FEMTO_pretrain:
         x = dataset["samples"]
         if x.shape[-1] == self.resampled_size:
             return dataset
-        return {"samples": torch.from_numpy(resample(x.numpy(), self.resampled_size, axis=-1)).float()}
+        return {
+            "samples": torch.from_numpy(
+                resample(x.numpy(), self.resampled_size, axis=-1)
+            ).float()
+        }
 
     @staticmethod
     def _normalize_norm_name(norm_method):
@@ -214,14 +271,18 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
 if __name__ == "__main__":
     processor = FEMTO_pretrain(
-        data_dir=r"H:\PHMFD_rawdata\UniFault\FEMTO",
-        save_dir=r"H:\PHMFD_data_all\PHMFD\FEMTO",
+        data_dir=Path("Raw_data") / "FEMTO",
+        save_dir=Path("Process_Data") / "FEMTO",
         desired_duration_sec=0.1,
         sampling_frequency=25600,
         resampled_size=None,

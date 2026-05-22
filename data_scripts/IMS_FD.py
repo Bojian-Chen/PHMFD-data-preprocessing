@@ -10,8 +10,15 @@ from scipy.signal import resample as scipy_resample
 
 
 DATASET_NAME = "IMS_FD"
-DEFAULT_RAW_DIR = Path(r"H:\PHMFD_rawdata\UniFault\IMS")
-DEFAULT_SAVE_DIR = Path(r"H:\PHMFD_data_all\PHMFD\IMS_FD")
+DEFAULT_RAW_DIR = Path("Raw_data") / "IMS"
+DEFAULT_SAVE_DIR = Path("Process_Data") / "IMS_FD"
+DATASET_CONFIG = {
+    "target": "IMS_FD",
+    "method": "prepare_dataset",
+    "task": "finetune",
+    "raw_folders": ("IMS", "IMS_FD"),
+    "save_folder": "IMS_FD",
+}
 
 
 class IMS_FD:
@@ -142,7 +149,9 @@ def segment_signal(signal, window_size):
     return trimmed.reshape(channels, n_windows, window_size).transpose(1, 0, 2)
 
 
-def split_finetune_indices(groups, seed=42, train_ratio=0.01, val_ratio=0.2, test_ratio=0.2):
+def split_finetune_indices(
+    groups, seed=42, train_ratio=0.01, val_ratio=0.2, test_ratio=0.2
+):
     rng = np.random.default_rng(seed)
     grouped = defaultdict(list)
     for idx, group in enumerate(groups):
@@ -154,8 +163,16 @@ def split_finetune_indices(groups, seed=42, train_ratio=0.01, val_ratio=0.2, tes
         rng.shuffle(indices)
         n_total = len(indices)
         n_train = max(1, int(np.ceil(n_total * train_ratio)))
-        n_val = max(1, int(np.floor(n_total * val_ratio))) if n_total - n_train > 1 else max(0, n_total - n_train)
-        n_test = max(1, int(np.floor(n_total * test_ratio))) if n_total - n_train - n_val > 0 else 0
+        n_val = (
+            max(1, int(np.floor(n_total * val_ratio)))
+            if n_total - n_train > 1
+            else max(0, n_total - n_train)
+        )
+        n_test = (
+            max(1, int(np.floor(n_total * test_ratio)))
+            if n_total - n_train - n_val > 0
+            else 0
+        )
 
         while n_train + n_val + n_test > n_total:
             if n_test > 0:
@@ -182,7 +199,9 @@ def normalize_per_sample(samples, norm_method):
     if method == "min-max":
         min_values = samples.min(axis=-1, keepdims=True)
         max_values = samples.max(axis=-1, keepdims=True)
-        return ((samples - min_values) / (max_values - min_values + 1e-8)).astype(np.float32)
+        return ((samples - min_values) / (max_values - min_values + 1e-8)).astype(
+            np.float32
+        )
     if method == "z-score":
         mean_values = samples.mean(axis=-1, keepdims=True)
         std_values = samples.std(axis=-1, keepdims=True)

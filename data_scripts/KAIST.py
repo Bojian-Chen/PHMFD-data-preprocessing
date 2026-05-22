@@ -10,13 +10,19 @@ from scipy.signal import resample
 
 FAULT_TYPES = ["normal", "ball", "inner", "outer"]
 CSV_INDICES = [0, 1, 2]
+DATASET_CONFIG = {
+    "target": "process_all_kaist_parts",
+    "task": "pretrain",
+    "raw_folders": ("KAIST",),
+    "save_folder": "",
+}
 
 
 class KAISTProcessor:
     def __init__(
         self,
-        raw_dir=r"H:\PHMFD_rawdata\UniFault\KAIST",
-        save_path=r"H:\PHMFD_data_all\KAIST",
+        raw_dir=Path("Raw_data") / "KAIST",
+        save_path=Path("Process_Data") / "KAIST",
         time_interval=0.1,
         norm="none",
         sampling_frequency=25600,
@@ -30,9 +36,13 @@ class KAISTProcessor:
         self.save_path = Path(save_path)
         self.desired_duration_sec = float(time_interval)
         self.sampling_frequency = int(sampling_frequency)
-        self.window_size = int(round(self.sampling_frequency * self.desired_duration_sec))
+        self.window_size = int(
+            round(self.sampling_frequency * self.desired_duration_sec)
+        )
         self.stride = self.window_size
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.norm_method = self._normalize_norm_name(norm)
         self.train_size = float(train_size)
         self.val_size = float(val_size)
@@ -61,12 +71,22 @@ class KAISTProcessor:
         test = self.resample_dataset(self.normalize_dataset(test))
 
         self.save_path.mkdir(parents=True, exist_ok=True)
-        save_parquet(train["samples"].squeeze(1).numpy(), "train", self.save_path / "train.parquet")
-        save_parquet(val["samples"].squeeze(1).numpy(), "val", self.save_path / "val.parquet")
-        save_parquet(test["samples"].squeeze(1).numpy(), "test", self.save_path / "test.parquet")
+        save_parquet(
+            train["samples"].squeeze(1).numpy(),
+            "train",
+            self.save_path / "train.parquet",
+        )
+        save_parquet(
+            val["samples"].squeeze(1).numpy(), "val", self.save_path / "val.parquet"
+        )
+        save_parquet(
+            test["samples"].squeeze(1).numpy(), "test", self.save_path / "test.parquet"
+        )
 
         print(f"KAIST pretrain saved to {self.save_path}")
-        print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+        print(
+            f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+        )
         return train, val, test
 
     def build_pretrain_samples(self, files):
@@ -83,7 +103,9 @@ class KAISTProcessor:
 
     def collect_csv_files(self):
         if not self.raw_dir.exists():
-            raise FileNotFoundError(f"KAIST data directory does not exist: {self.raw_dir}")
+            raise FileNotFoundError(
+                f"KAIST data directory does not exist: {self.raw_dir}"
+            )
 
         roots = [self.raw_dir]
         roots.extend(path for path in sorted(self.raw_dir.iterdir()) if path.is_dir())
@@ -112,7 +134,9 @@ class KAISTProcessor:
             if missing_files:
                 missing = "\n".join(missing_files)
                 raise FileNotFoundError(f"Incomplete KAIST csv files:\n{missing}")
-            raise RuntimeError(f"No KAIST vibration csv files found under {self.raw_dir}")
+            raise RuntimeError(
+                f"No KAIST vibration csv files found under {self.raw_dir}"
+            )
 
         print(f"Using KAIST csv root: {selected_root}")
         return files
@@ -130,7 +154,9 @@ class KAISTProcessor:
         for channel_signal in signal:
             if channel_signal.numel() < self.window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=self.window_size, step=self.stride)
+            windows = channel_signal.unfold(
+                dimension=0, size=self.window_size, step=self.stride
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, self.window_size), dtype=torch.float32)
@@ -147,8 +173,12 @@ class KAISTProcessor:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -173,7 +203,11 @@ class KAISTProcessor:
         x = dataset["samples"]
         if x.shape[-1] == self.resampled_size:
             return dataset
-        return {"samples": torch.from_numpy(resample(x.numpy(), self.resampled_size, axis=-1)).float()}
+        return {
+            "samples": torch.from_numpy(
+                resample(x.numpy(), self.resampled_size, axis=-1)
+            ).float()
+        }
 
     @staticmethod
     def _normalize_norm_name(norm_method):
@@ -199,7 +233,11 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
@@ -234,7 +272,9 @@ def find_kaist_parts(raw_root):
             candidate_roots.append(path)
 
     if not candidate_roots:
-        raise RuntimeError(f"No complete KAIST vibration csv set found under {raw_root}")
+        raise RuntimeError(
+            f"No complete KAIST vibration csv set found under {raw_root}"
+        )
 
     parts = []
     used_names = set()
@@ -248,8 +288,8 @@ def find_kaist_parts(raw_root):
 
 
 def process_all_kaist_parts(
-    raw_root=r"H:\PHMFD_rawdata\UniFault\KAIST",
-    save_root=r"H:\PHMFD_data_all\PHMFD",
+    raw_root=Path("Raw_data") / "KAIST",
+    save_root=Path("Process_Data"),
     time_interval=0.1,
     norm="none",
     sampling_frequency=25600,
@@ -280,8 +320,8 @@ def process_all_kaist_parts(
 
 if __name__ == "__main__":
     process_all_kaist_parts(
-        raw_root=r"H:\PHMFD_rawdata\UniFault\KAIST",
-        save_root=r"H:\PHMFD_data_all\PHMFD",
+        raw_root=Path("Raw_data") / "KAIST",
+        save_root=Path("Process_Data"),
         time_interval=0.1,
         norm="none",
         sampling_frequency=25600,

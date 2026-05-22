@@ -9,11 +9,20 @@ from scipy.io import loadmat
 from scipy.signal import resample
 
 
+DATASET_CONFIG = {
+    "target": "MFPTDatasetPreprocessor",
+    "method": "process",
+    "task": "pretrain",
+    "raw_folders": ("MFPT",),
+    "save_folder": "MFPT",
+}
+
+
 class MFPTDatasetPreprocessor:
     def __init__(
         self,
-        data_root=r"H:\PHMFD_rawdata\UniFault\MFPT",
-        save_root=r"H:\PHMFD_data_all\MFPT",
+        data_root=Path("Raw_data") / "MFPT",
+        save_root=Path("Process_Data") / "MFPT",
         time_interval=0.1,
         norm="none",
         resampled_size=1024,
@@ -25,7 +34,9 @@ class MFPTDatasetPreprocessor:
         self.data_root = Path(data_root)
         self.save_root = Path(save_root)
         self.desired_duration_sec = float(time_interval)
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.norm_method = self._normalize_norm_name(norm)
         self.train_size = float(train_size)
         self.val_size = float(val_size)
@@ -63,12 +74,26 @@ class MFPTDatasetPreprocessor:
                 group_save_root = self.save_root / group_name
 
             group_save_root.mkdir(parents=True, exist_ok=True)
-            save_parquet(train["samples"].squeeze(1).numpy(), "train", group_save_root / "train.parquet")
-            save_parquet(val["samples"].squeeze(1).numpy(), "val", group_save_root / "val.parquet")
-            save_parquet(test["samples"].squeeze(1).numpy(), "test", group_save_root / "test.parquet")
+            save_parquet(
+                train["samples"].squeeze(1).numpy(),
+                "train",
+                group_save_root / "train.parquet",
+            )
+            save_parquet(
+                val["samples"].squeeze(1).numpy(),
+                "val",
+                group_save_root / "val.parquet",
+            )
+            save_parquet(
+                test["samples"].squeeze(1).numpy(),
+                "test",
+                group_save_root / "test.parquet",
+            )
 
             print(f"MFPT {group_name} pretrain saved to {group_save_root}")
-            print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+            print(
+                f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+            )
             outputs[group_name] = (train, val, test)
         return outputs
 
@@ -91,11 +116,16 @@ class MFPTDatasetPreprocessor:
 
         if not sample_groups:
             raise RuntimeError(f"No MFPT samples loaded from {self.data_root}")
-        return {group_name: torch.cat(samples, dim=0).float() for group_name, samples in sample_groups.items()}
+        return {
+            group_name: torch.cat(samples, dim=0).float()
+            for group_name, samples in sample_groups.items()
+        }
 
     def collect_files(self):
         if not self.data_root.exists():
-            raise FileNotFoundError(f"MFPT data directory does not exist: {self.data_root}")
+            raise FileNotFoundError(
+                f"MFPT data directory does not exist: {self.data_root}"
+            )
 
         files = []
         for folder_name in self.folder_names:
@@ -121,7 +151,10 @@ class MFPTDatasetPreprocessor:
                 value = np.asarray(item).reshape(-1)[0]
                 if isinstance(value, np.generic):
                     value = value.item()
-                if isinstance(value, (int, float, np.integer, np.floating)) and value > 1000:
+                if (
+                    isinstance(value, (int, float, np.integer, np.floating))
+                    and value > 1000
+                ):
                     sampling_frequency = int(round(float(value)))
 
         if signal is None:
@@ -133,12 +166,16 @@ class MFPTDatasetPreprocessor:
     def subsample_channels_independently(self, signal, sampling_frequency):
         window_size = int(round(float(sampling_frequency) * self.desired_duration_sec))
         if window_size <= 0:
-            raise ValueError(f"Invalid window_size {window_size} for sampling_frequency {sampling_frequency}")
+            raise ValueError(
+                f"Invalid window_size {window_size} for sampling_frequency {sampling_frequency}"
+            )
         channel_windows = []
         for channel_signal in signal:
             if channel_signal.numel() < window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=window_size, step=window_size)
+            windows = channel_signal.unfold(
+                dimension=0, size=window_size, step=window_size
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, window_size), dtype=torch.float32)
@@ -147,7 +184,9 @@ class MFPTDatasetPreprocessor:
     def resample_windows(self, windows):
         if windows.shape[-1] == self.resampled_size:
             return windows
-        return torch.from_numpy(resample(windows.numpy(), self.resampled_size, axis=-1)).float()
+        return torch.from_numpy(
+            resample(windows.numpy(), self.resampled_size, axis=-1)
+        ).float()
 
     def train_val_test_split(self, samples):
         generator = torch.Generator().manual_seed(self.seed)
@@ -160,8 +199,12 @@ class MFPTDatasetPreprocessor:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -212,14 +255,18 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
 if __name__ == "__main__":
     processor = MFPTDatasetPreprocessor(
-        data_root=r"H:\PHMFD_rawdata\UniFault\MFPT",
-        save_root=r"H:\PHMFD_data_all\UniFault\MFPT",
+        data_root=Path("Raw_data") / "MFPT",
+        save_root=Path("Process_Data") / "MFPT",
         time_interval=0.1,
         norm="minmax",
         resampled_size=1024,

@@ -9,10 +9,20 @@ from scipy.io import loadmat
 from scipy.signal import resample
 
 
+DATASET_CONFIG = {
+    "target": "PrepareCWRU",
+    "method": "process_data",
+    "task": "pretrain",
+    "raw_folders": ("CWRU",),
+    "save_folder": "CWRU",
+    "extra_kwargs": {"stride": None},
+}
+
+
 class PrepareCWRU:
     def __init__(
         self,
-        data_dir=r"H:\PHMFD_rawdata\UniFault\CWRU",
+        data_dir=Path("Raw_data") / "CWRU",
         desired_duration_sec=0.1,
         stride=None,
         norm_method="none",
@@ -27,8 +37,12 @@ class PrepareCWRU:
         self.folder_path = Path(data_dir)
         self.sampling_frequency = int(sampling_frequency)
         self.desired_duration_sec = float(desired_duration_sec)
-        self.window_size = int(round(self.sampling_frequency * self.desired_duration_sec))
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.window_size = int(
+            round(self.sampling_frequency * self.desired_duration_sec)
+        )
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.stride = int(stride) if stride is not None else self.window_size
         self.norm_method = self._normalize_norm_name(norm_method)
         self.train_size = float(train_size)
@@ -37,7 +51,9 @@ class PrepareCWRU:
         self.seed = int(seed)
 
         if self.window_size <= 0:
-            raise ValueError("window_size must be positive. Check sampling_frequency and desired_duration_sec.")
+            raise ValueError(
+                "window_size must be positive. Check sampling_frequency and desired_duration_sec."
+            )
         if self.resampled_size is not None and self.resampled_size <= 0:
             raise ValueError("resampled_size must be positive.")
         if self.stride <= 0:
@@ -50,13 +66,59 @@ class PrepareCWRU:
             "zscore": "z_score_norm",
             "minmax": "min_max_norm",
         }[self.norm_method]
-        self.parquet_save_path = Path(save_dir) if save_dir else Path("processed_data") / norm_dir / "multi_scale" / f"CWRU_{self.desired_duration_sec:g}s"
+        self.parquet_save_path = (
+            Path(save_dir)
+            if save_dir
+            else Path("Process_Data")
+            / norm_dir
+            / "multi_scale"
+            / f"CWRU_{self.desired_duration_sec:g}s"
+        )
         self.parquet_save_path.mkdir(parents=True, exist_ok=True)
 
         self.healthy_files = ["97", "98", "99", "100"]
-        self.inner_fault_files = ["105", "106", "107", "108", "169", "170", "171", "172", "209", "210", "211", "212"]
-        self.ball_fault_files = ["118", "119", "120", "121", "185", "186", "187", "188", "222", "223", "224", "225"]
-        self.outer_fault_files = ["130", "131", "132", "133", "197", "198", "199", "200", "234", "235", "236", "237"]
+        self.inner_fault_files = [
+            "105",
+            "106",
+            "107",
+            "108",
+            "169",
+            "170",
+            "171",
+            "172",
+            "209",
+            "210",
+            "211",
+            "212",
+        ]
+        self.ball_fault_files = [
+            "118",
+            "119",
+            "120",
+            "121",
+            "185",
+            "186",
+            "187",
+            "188",
+            "222",
+            "223",
+            "224",
+            "225",
+        ]
+        self.outer_fault_files = [
+            "130",
+            "131",
+            "132",
+            "133",
+            "197",
+            "198",
+            "199",
+            "200",
+            "234",
+            "235",
+            "236",
+            "237",
+        ]
 
         self.class_files = {
             0: self.healthy_files,
@@ -72,12 +134,26 @@ class PrepareCWRU:
         val = self.resample_dataset(self.normalize_dataset(val))
         test = self.resample_dataset(self.normalize_dataset(test))
 
-        save_parquet(train["samples"].squeeze(1).numpy(), "train", self.parquet_save_path / "train.parquet")
-        save_parquet(val["samples"].squeeze(1).numpy(), "val", self.parquet_save_path / "val.parquet")
-        save_parquet(test["samples"].squeeze(1).numpy(), "test", self.parquet_save_path / "test.parquet")
+        save_parquet(
+            train["samples"].squeeze(1).numpy(),
+            "train",
+            self.parquet_save_path / "train.parquet",
+        )
+        save_parquet(
+            val["samples"].squeeze(1).numpy(),
+            "val",
+            self.parquet_save_path / "val.parquet",
+        )
+        save_parquet(
+            test["samples"].squeeze(1).numpy(),
+            "test",
+            self.parquet_save_path / "test.parquet",
+        )
 
         print(f"CWRU saved to {self.parquet_save_path}")
-        print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+        print(
+            f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+        )
         return train, val, test
 
     def load_prepared_dataset(self, norm=None):
@@ -87,7 +163,9 @@ class PrepareCWRU:
 
     def build_pretrain_samples(self):
         if not self.folder_path.exists():
-            raise FileNotFoundError(f"CWRU data directory does not exist: {self.folder_path}")
+            raise FileNotFoundError(
+                f"CWRU data directory does not exist: {self.folder_path}"
+            )
 
         samples = []
         missing_files = []
@@ -116,7 +194,9 @@ class PrepareCWRU:
         de_keys = [key for key in mat if key.endswith("DE_time")]
         fe_keys = [key for key in mat if key.endswith("FE_time")]
         if not de_keys or not fe_keys:
-            raise KeyError(f"{mat_path} must contain both DE_time and FE_time channels.")
+            raise KeyError(
+                f"{mat_path} must contain both DE_time and FE_time channels."
+            )
 
         de_signal = np.asarray(mat[de_keys[0]], dtype=np.float32).reshape(-1)
         fe_signal = np.asarray(mat[fe_keys[0]], dtype=np.float32).reshape(-1)
@@ -127,7 +207,9 @@ class PrepareCWRU:
         for channel_signal in signal:
             if channel_signal.numel() < self.window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=self.window_size, step=self.stride)
+            windows = channel_signal.unfold(
+                dimension=0, size=self.window_size, step=self.stride
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, self.window_size), dtype=torch.float32)
@@ -148,8 +230,12 @@ class PrepareCWRU:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -202,20 +288,23 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
 if __name__ == "__main__":
     processor = PrepareCWRU(
-        data_dir=r"H:\PHMFD_rawdata\UniFault\CWRU",
+        data_dir=Path("Raw_data") / "CWRU",
         desired_duration_sec=0.1,
         sampling_frequency=12000,
         resampled_size=None,
         stride=None,
         norm_method="none",
-        # save_dir=r"H:\PHMFD_data_all\UniFault\CWRU",
-        save_dir=r"H:\PHMFD_data_all\PHMFD\CWRU",
+        save_dir=Path("Process_Data") / "CWRU",
         train_size=0.6,
         val_size=0.2,
         test_size=0.2,

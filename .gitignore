@@ -1,6 +1,6 @@
 dataset_analysis/
-Process_data/
-Raw_data/
+Process_data/*
+Raw_data/*
 *.ipynb
 dataset_analysis_reports
 *.pyc

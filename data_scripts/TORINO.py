@@ -9,11 +9,20 @@ from scipy.io import loadmat
 from scipy.signal import resample
 
 
+DATASET_CONFIG = {
+    "target": "TorinoBearingPreprocessor",
+    "method": "process",
+    "task": "pretrain",
+    "raw_folders": ("DIRG", "TORINO"),
+    "save_folder": "TORINO",
+}
+
+
 class TorinoBearingPreprocessor:
     def __init__(
         self,
-        data_root=r"H:\PHMFD_rawdata\UniFault\DIRG",
-        save_root=r"H:\PHMFD_data_all\TORINO",
+        data_root=Path("Raw_data") / "DIRG",
+        save_root=Path("Process_Data") / "TORINO",
         time_interval=0.1,
         norm="none",
         sampling_frequency=51200,
@@ -27,9 +36,13 @@ class TorinoBearingPreprocessor:
         self.save_root = Path(save_root)
         self.desired_duration_sec = float(time_interval)
         self.sampling_frequency = int(sampling_frequency)
-        self.window_size = int(round(self.sampling_frequency * self.desired_duration_sec))
+        self.window_size = int(
+            round(self.sampling_frequency * self.desired_duration_sec)
+        )
         self.stride = self.window_size
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.norm_method = self._normalize_norm_name(norm)
         self.train_size = float(train_size)
         self.val_size = float(val_size)
@@ -52,18 +65,30 @@ class TorinoBearingPreprocessor:
         test = self.resample_dataset(self.normalize_dataset(test))
 
         self.save_root.mkdir(parents=True, exist_ok=True)
-        save_parquet(train["samples"].squeeze(1).numpy(), "train", self.save_root / "train.parquet")
-        save_parquet(val["samples"].squeeze(1).numpy(), "val", self.save_root / "val.parquet")
-        save_parquet(test["samples"].squeeze(1).numpy(), "test", self.save_root / "test.parquet")
+        save_parquet(
+            train["samples"].squeeze(1).numpy(),
+            "train",
+            self.save_root / "train.parquet",
+        )
+        save_parquet(
+            val["samples"].squeeze(1).numpy(), "val", self.save_root / "val.parquet"
+        )
+        save_parquet(
+            test["samples"].squeeze(1).numpy(), "test", self.save_root / "test.parquet"
+        )
 
         print(f"TORINO pretrain saved to {self.save_root}")
-        print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+        print(
+            f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+        )
         return train, val, test
 
     def build_pretrain_samples(self):
         files = self.collect_files()
         if not files:
-            raise RuntimeError(f"No TORINO C0A-C6A .mat files found under {self.data_root}")
+            raise RuntimeError(
+                f"No TORINO C0A-C6A .mat files found under {self.data_root}"
+            )
 
         samples = []
         for file_path in files:
@@ -78,7 +103,9 @@ class TorinoBearingPreprocessor:
 
     def collect_files(self):
         if not self.data_root.exists():
-            raise FileNotFoundError(f"TORINO data directory does not exist: {self.data_root}")
+            raise FileNotFoundError(
+                f"TORINO data directory does not exist: {self.data_root}"
+            )
 
         files = []
         for file_path in sorted(self.data_root.glob("**/*.mat")):
@@ -110,7 +137,9 @@ class TorinoBearingPreprocessor:
         for channel_signal in signal:
             if channel_signal.numel() < self.window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=self.window_size, step=self.stride)
+            windows = channel_signal.unfold(
+                dimension=0, size=self.window_size, step=self.stride
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, self.window_size), dtype=torch.float32)
@@ -127,8 +156,12 @@ class TorinoBearingPreprocessor:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -153,7 +186,11 @@ class TorinoBearingPreprocessor:
         x = dataset["samples"]
         if x.shape[-1] == self.resampled_size:
             return dataset
-        return {"samples": torch.from_numpy(resample(x.numpy(), self.resampled_size, axis=-1)).float()}
+        return {
+            "samples": torch.from_numpy(
+                resample(x.numpy(), self.resampled_size, axis=-1)
+            ).float()
+        }
 
     @staticmethod
     def _normalize_norm_name(norm_method):
@@ -179,14 +216,18 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
 if __name__ == "__main__":
     processor = TorinoBearingPreprocessor(
-        data_root=r"H:\PHMFD_rawdata\UniFault\DIRG",
-        save_root=r"H:\PHMFD_data_all\UniFault\TORINO",
+        data_root=Path("Raw_data") / "DIRG",
+        save_root=Path("Process_Data") / "TORINO",
         time_interval=0.1,
         norm="minmax",
         resampled_size=1024,

@@ -9,12 +9,21 @@ from scipy.io import loadmat
 from scipy.signal import resample
 
 
+DATASET_CONFIG = {
+    "target": "HITSM",
+    "method": "process_data",
+    "task": "pretrain",
+    "raw_folders": ("HIT-SM", "HITSM"),
+    "save_folder": "HITSM",
+}
+
+
 class HITSM:
     def __init__(
         self,
         args=None,
-        data_dir=r"H:\PHMFD_rawdata\UniFault\HIT-SM",
-        save_dir=r"H:\PHMFD_data_all\HITSM",
+        data_dir=Path("Raw_data") / "HIT-SM",
+        save_dir=Path("Process_Data") / "HITSM",
         desired_duration_sec=0.1,
         sampling_frequency=51200,
         resampled_size=None,
@@ -25,11 +34,15 @@ class HITSM:
         seed=42,
     ) -> None:
         if args is not None:
-            data_root = Path(getattr(args, "raw_dir", r"H:\PHMFD_rawdata\UniFault"))
+            data_root = Path(getattr(args, "raw_dir", Path("Raw_data")))
             data_dir = data_root / "HIT-SM"
-            save_dir = Path(getattr(args, "processed_dir", r"H:\PHMFD_data_all")) / "HITSM"
+            save_dir = (
+                Path(getattr(args, "processed_dir", Path("Process_Data"))) / "HITSM"
+            )
             norm_method = getattr(args, "norm_method", norm_method)
-            desired_duration_sec = getattr(args, "desired_duration_sec", desired_duration_sec)
+            desired_duration_sec = getattr(
+                args, "desired_duration_sec", desired_duration_sec
+            )
             sampling_frequency = getattr(args, "sampling_frequency", sampling_frequency)
             resampled_size = getattr(args, "resampled_size", resampled_size)
             train_size = getattr(args, "train_size", train_size)
@@ -41,9 +54,13 @@ class HITSM:
         self.parquet_save_path = Path(save_dir)
         self.desired_duration_sec = float(desired_duration_sec)
         self.sampling_frequency = int(sampling_frequency)
-        self.window_size = int(round(self.sampling_frequency * self.desired_duration_sec))
+        self.window_size = int(
+            round(self.sampling_frequency * self.desired_duration_sec)
+        )
         self.stride = self.window_size
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.norm_method = self._normalize_norm_name(norm_method)
         self.train_size = float(train_size)
         self.val_size = float(val_size)
@@ -58,13 +75,27 @@ class HITSM:
             raise ValueError("train_size + val_size + test_size must equal 1.0.")
 
         self.file_names = [
-            "Normal_600.mat", "Normal_900.mat", "Normal_1200.mat",
-            "IR2_600.mat", "IR2_900.mat", "IR2_1200.mat",
-            "IR5_600.mat", "IR5_900.mat", "IR5_1200.mat",
-            "IR8_600.mat", "IR8_900.mat", "IR8_1200.mat",
-            "OR2_600.mat", "OR2_900.mat", "OR2_1200.mat",
-            "OR5_600.mat", "OR5_900.mat", "OR5_1200.mat",
-            "OR8_600.mat", "OR8_900.mat", "OR8_1200.mat",
+            "Normal_600.mat",
+            "Normal_900.mat",
+            "Normal_1200.mat",
+            "IR2_600.mat",
+            "IR2_900.mat",
+            "IR2_1200.mat",
+            "IR5_600.mat",
+            "IR5_900.mat",
+            "IR5_1200.mat",
+            "IR8_600.mat",
+            "IR8_900.mat",
+            "IR8_1200.mat",
+            "OR2_600.mat",
+            "OR2_900.mat",
+            "OR2_1200.mat",
+            "OR5_600.mat",
+            "OR5_900.mat",
+            "OR5_1200.mat",
+            "OR8_600.mat",
+            "OR8_900.mat",
+            "OR8_1200.mat",
         ]
         self.subsets = {
             "HITSM_self_built": "Self-built dataset",
@@ -73,7 +104,9 @@ class HITSM:
 
     def process_data(self):
         if not self.folder_path.exists():
-            raise FileNotFoundError(f"HIT-SM data directory does not exist: {self.folder_path}")
+            raise FileNotFoundError(
+                f"HIT-SM data directory does not exist: {self.folder_path}"
+            )
 
         outputs = {}
         for dataset_name, subset_dir in self.subsets.items():
@@ -85,18 +118,30 @@ class HITSM:
 
             save_path = self.parquet_save_path / dataset_name
             save_path.mkdir(parents=True, exist_ok=True)
-            save_parquet(train["samples"].squeeze(1).numpy(), "train", save_path / "train.parquet")
-            save_parquet(val["samples"].squeeze(1).numpy(), "val", save_path / "val.parquet")
-            save_parquet(test["samples"].squeeze(1).numpy(), "test", save_path / "test.parquet")
+            save_parquet(
+                train["samples"].squeeze(1).numpy(),
+                "train",
+                save_path / "train.parquet",
+            )
+            save_parquet(
+                val["samples"].squeeze(1).numpy(), "val", save_path / "val.parquet"
+            )
+            save_parquet(
+                test["samples"].squeeze(1).numpy(), "test", save_path / "test.parquet"
+            )
 
             print(f"{dataset_name} pretrain saved to {save_path}")
-            print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+            print(
+                f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+            )
             outputs[dataset_name] = (train, val, test)
         return outputs
 
     def build_pretrain_samples(self, subset_path):
         if not subset_path.exists():
-            raise FileNotFoundError(f"HIT-SM subset directory does not exist: {subset_path}")
+            raise FileNotFoundError(
+                f"HIT-SM subset directory does not exist: {subset_path}"
+            )
 
         samples = []
         missing_files = []
@@ -133,7 +178,9 @@ class HITSM:
         for channel_signal in signal:
             if channel_signal.numel() < self.window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=self.window_size, step=self.stride)
+            windows = channel_signal.unfold(
+                dimension=0, size=self.window_size, step=self.stride
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, self.window_size), dtype=torch.float32)
@@ -150,8 +197,12 @@ class HITSM:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -176,7 +227,11 @@ class HITSM:
         x = dataset["samples"]
         if x.shape[-1] == self.resampled_size:
             return dataset
-        return {"samples": torch.from_numpy(resample(x.numpy(), self.resampled_size, axis=-1)).float()}
+        return {
+            "samples": torch.from_numpy(
+                resample(x.numpy(), self.resampled_size, axis=-1)
+            ).float()
+        }
 
     @staticmethod
     def _normalize_norm_name(norm_method):
@@ -202,14 +257,18 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
 if __name__ == "__main__":
     processor = HITSM(
-        data_dir=r"H:\PHMFD_rawdata\UniFault\HIT-SM",
-        save_dir=r"H:\PHMFD_data_all\PHMFD\HITSM",
+        data_dir=Path("Raw_data") / "HIT-SM",
+        save_dir=Path("Process_Data") / "HITSM",
         desired_duration_sec=0.1,
         sampling_frequency=51200,
         resampled_size=None,

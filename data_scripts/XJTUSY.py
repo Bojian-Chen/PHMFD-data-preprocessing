@@ -8,11 +8,20 @@ import torch
 from scipy.signal import resample
 
 
+DATASET_CONFIG = {
+    "target": "PrepareXJTUSY",
+    "method": "load_prepared_dataset",
+    "task": "pretrain",
+    "raw_folders": ("XJTU-SY", "XJTUSY"),
+    "save_folder": "XJTUSY",
+}
+
+
 class PrepareXJTUSY:
     def __init__(
         self,
-        data_dir=r"H:\PHMFD_rawdata\UniFault\XJTU-SY",
-        save_dir=r"H:\PHMFD_data_all\XJTUSY",
+        data_dir=Path("Raw_data") / "XJTU-SY",
+        save_dir=Path("Process_Data") / "XJTUSY",
         time_interval=0.1,
         norm_method="none",
         sampling_frequency=25600,
@@ -26,9 +35,13 @@ class PrepareXJTUSY:
         self.save_path = Path(save_dir)
         self.desired_duration_sec = float(time_interval)
         self.sampling_frequency = int(sampling_frequency)
-        self.window_size = int(round(self.sampling_frequency * self.desired_duration_sec))
+        self.window_size = int(
+            round(self.sampling_frequency * self.desired_duration_sec)
+        )
         self.stride = self.window_size
-        self.resampled_size = int(resampled_size) if resampled_size is not None else None
+        self.resampled_size = (
+            int(resampled_size) if resampled_size is not None else None
+        )
         self.norm_method = self._normalize_norm_name(norm_method)
         self.train_size = float(train_size)
         self.val_size = float(val_size)
@@ -44,9 +57,21 @@ class PrepareXJTUSY:
 
         self.condition_name = ["35Hz12kN", "37.5Hz11kN", "40Hz10kN"]
         self.bearing_names = [
-            "Bearing1_1", "Bearing1_2", "Bearing1_3", "Bearing1_4", "Bearing1_5",
-            "Bearing2_1", "Bearing2_2", "Bearing2_3", "Bearing2_4", "Bearing2_5",
-            "Bearing3_1", "Bearing3_2", "Bearing3_3", "Bearing3_4", "Bearing3_5",
+            "Bearing1_1",
+            "Bearing1_2",
+            "Bearing1_3",
+            "Bearing1_4",
+            "Bearing1_5",
+            "Bearing2_1",
+            "Bearing2_2",
+            "Bearing2_3",
+            "Bearing2_4",
+            "Bearing2_5",
+            "Bearing3_1",
+            "Bearing3_2",
+            "Bearing3_3",
+            "Bearing3_4",
+            "Bearing3_5",
         ]
 
     def load_prepared_dataset(self):
@@ -60,17 +85,29 @@ class PrepareXJTUSY:
         test = self.resample_dataset(self.normalize_dataset(test))
 
         self.save_path.mkdir(parents=True, exist_ok=True)
-        save_parquet(train["samples"].squeeze(1).numpy(), "train", self.save_path / "train.parquet")
-        save_parquet(val["samples"].squeeze(1).numpy(), "val", self.save_path / "val.parquet")
-        save_parquet(test["samples"].squeeze(1).numpy(), "test", self.save_path / "test.parquet")
+        save_parquet(
+            train["samples"].squeeze(1).numpy(),
+            "train",
+            self.save_path / "train.parquet",
+        )
+        save_parquet(
+            val["samples"].squeeze(1).numpy(), "val", self.save_path / "val.parquet"
+        )
+        save_parquet(
+            test["samples"].squeeze(1).numpy(), "test", self.save_path / "test.parquet"
+        )
 
         print(f"XJTUSY pretrain saved to {self.save_path}")
-        print(f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}")
+        print(
+            f"Train: {tuple(train['samples'].shape)}, Val: {tuple(val['samples'].shape)}, Test: {tuple(test['samples'].shape)}"
+        )
         return train, val, test
 
     def build_pretrain_samples(self):
         if not self.folder_path.exists():
-            raise FileNotFoundError(f"XJTU-SY data directory does not exist: {self.folder_path}")
+            raise FileNotFoundError(
+                f"XJTU-SY data directory does not exist: {self.folder_path}"
+            )
 
         samples = []
         missing_dirs = []
@@ -114,7 +151,9 @@ class PrepareXJTUSY:
         for channel_signal in signal:
             if channel_signal.numel() < self.window_size:
                 continue
-            windows = channel_signal.unfold(dimension=0, size=self.window_size, step=self.stride)
+            windows = channel_signal.unfold(
+                dimension=0, size=self.window_size, step=self.stride
+            )
             channel_windows.append(windows.unsqueeze(1))
         if not channel_windows:
             return torch.empty((0, 1, self.window_size), dtype=torch.float32)
@@ -131,8 +170,12 @@ class PrepareXJTUSY:
         test_count = total_size - train_count - val_count
 
         train = {"samples": samples[:train_count]}
-        val = {"samples": samples[train_count:train_count + val_count]}
-        test = {"samples": samples[train_count + val_count:train_count + val_count + test_count]}
+        val = {"samples": samples[train_count : train_count + val_count]}
+        test = {
+            "samples": samples[
+                train_count + val_count : train_count + val_count + test_count
+            ]
+        }
         return train, val, test
 
     def normalize_dataset(self, dataset):
@@ -157,7 +200,11 @@ class PrepareXJTUSY:
         x = dataset["samples"]
         if x.shape[-1] == self.resampled_size:
             return dataset
-        return {"samples": torch.from_numpy(resample(x.numpy(), self.resampled_size, axis=-1)).float()}
+        return {
+            "samples": torch.from_numpy(
+                resample(x.numpy(), self.resampled_size, axis=-1)
+            ).float()
+        }
 
     @staticmethod
     def _normalize_norm_name(norm_method):
@@ -183,14 +230,18 @@ def save_parquet(samples, dataset_name, save_path):
 def load_parquet_data(path):
     table = pq.read_table(path)
     samples = np.array(table["samples"].to_pylist())
-    labels = np.array(table["labels"].to_pylist()) if "labels" in table.column_names else None
+    labels = (
+        np.array(table["labels"].to_pylist())
+        if "labels" in table.column_names
+        else None
+    )
     return samples, labels
 
 
 if __name__ == "__main__":
     xjtusy_preproc = PrepareXJTUSY(
-        data_dir=r"/media/xyc3090/WDSSD/PHMFD_rawdata/UniFault/XJTU-SY",
-        save_dir=r"/media/xyc3090/WDSSD/PHMFD_data_all/UniFault/XJTUSY",
+        data_dir=Path("Raw_data") / "XJTU-SY",
+        save_dir=Path("Process_Data") / "XJTUSY",
         time_interval=0.1,
         norm_method="minmax",
         resampled_size=1024,

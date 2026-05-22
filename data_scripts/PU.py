@@ -11,8 +11,15 @@ from scipy.signal import resample as scipy_resample
 
 
 DATASET_NAME = "PU"
-DEFAULT_RAW_DIR = Path(r"H:\PHMFD_rawdata\UniFault\PU")
-DEFAULT_SAVE_DIR = Path(r"H:\PHMFD_data_all\UniFault\PU")
+DEFAULT_RAW_DIR = Path("Raw_data") / "PU"
+DEFAULT_SAVE_DIR = Path("Process_Data") / "PU"
+DATASET_CONFIG = {
+    "target": "PreparePaderborn",
+    "method": "prepare_dataset",
+    "task": "finetune",
+    "raw_folders": ("PU", "RM_027_PU"),
+    "save_folder": "PU",
+}
 
 
 class PreparePaderborn:
@@ -88,7 +95,9 @@ class PreparePaderborn:
         )
 
     def resolve_data_root(self):
-        if all((self.raw_dir / bearing).exists() for bearing in self.bearing_to_be_used):
+        if all(
+            (self.raw_dir / bearing).exists() for bearing in self.bearing_to_be_used
+        ):
             return self.raw_dir
         nested = self.raw_dir / "RM_027_PU"
         if all((nested / bearing).exists() for bearing in self.bearing_to_be_used):
@@ -174,7 +183,11 @@ def split_finetune_indices(
         rng.shuffle(indices)
         n_total = len(indices)
         n_train_full = max(1, int(np.floor(n_total * train_ratio)))
-        n_val = max(1, int(np.floor(n_total * val_ratio))) if n_total - n_train_full > 1 else max(0, n_total - n_train_full)
+        n_val = (
+            max(1, int(np.floor(n_total * val_ratio)))
+            if n_total - n_train_full > 1
+            else max(0, n_total - n_train_full)
+        )
 
         while n_train_full + n_val > n_total:
             if n_val > 0:
@@ -215,7 +228,9 @@ def sample_fewshot_train(train_indices, groups, fraction, seed):
     sampled = []
     for group in sorted(by_group):
         indices = np.asarray(by_group[group], dtype=np.int64)
-        chosen_idx = rng.choice(len(indices), size=target_by_group[group], replace=False)
+        chosen_idx = rng.choice(
+            len(indices), size=target_by_group[group], replace=False
+        )
         sampled.extend(indices[chosen_idx].tolist())
     return sorted(sampled)
 
@@ -223,7 +238,9 @@ def sample_fewshot_train(train_indices, groups, fraction, seed):
 def proportional_counts(group_sizes, target_total):
     groups = sorted(group_sizes)
     if target_total < len(groups):
-        raise ValueError(f"target_total={target_total} is smaller than non-empty groups={len(groups)}")
+        raise ValueError(
+            f"target_total={target_total} is smaller than non-empty groups={len(groups)}"
+        )
 
     counts = {group: 1 for group in groups}
     remaining = target_total - len(groups)
@@ -234,12 +251,19 @@ def proportional_counts(group_sizes, target_total):
     if total_after_min <= 0:
         return counts
 
-    raw = {group: remaining * (group_sizes[group] - 1) / total_after_min for group in groups}
+    raw = {
+        group: remaining * (group_sizes[group] - 1) / total_after_min
+        for group in groups
+    }
     for group in groups:
         counts[group] += int(math.floor(raw[group]))
 
     leftover = target_total - sum(counts.values())
-    remainders = sorted(groups, key=lambda group: (raw[group] - math.floor(raw[group]), group), reverse=True)
+    remainders = sorted(
+        groups,
+        key=lambda group: (raw[group] - math.floor(raw[group]), group),
+        reverse=True,
+    )
     for group in remainders[:leftover]:
         counts[group] += 1
 
@@ -255,7 +279,9 @@ def normalize_per_sample(samples, norm_method):
     if method == "min-max":
         min_values = samples.min(axis=-1, keepdims=True)
         max_values = samples.max(axis=-1, keepdims=True)
-        return ((samples - min_values) / (max_values - min_values + 1e-8)).astype(np.float32)
+        return ((samples - min_values) / (max_values - min_values + 1e-8)).astype(
+            np.float32
+        )
     if method == "z-score":
         mean_values = samples.mean(axis=-1, keepdims=True)
         std_values = samples.std(axis=-1, keepdims=True)
