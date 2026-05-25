@@ -43,7 +43,7 @@ DATASET_CONFIG = {
 `task` 使用：
 
 - `pretrain`：通常输出 `train.parquet`、`val.parquet`、`test.parquet`
-- `finetune`：通常输出 `train_1p.parquet`、`val.parquet`、`test.parquet`
+- `finetune`：通常输出完整训练集 `train.parquet`、1% 训练集 `train_1p.parquet`、`val.parquet`、`test.parquet`
 
 新增数据集时还要在 `data_scripts/__init__.py` 的 `DATASET_MODULES` 中注册模块名。必要时在 `DATASET_ALIASES` 中加常用别名。
 

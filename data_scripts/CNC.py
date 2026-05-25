@@ -28,6 +28,9 @@ class PrepareCNC:
         sampling_frequency=2000,
         norm_method="none",
         resampled_size=None,
+        train_size=0.6,
+        val_size=0.2,
+        test_size=0.2,
         seed=42,
         fewshot_seed=20260504,
     ):
@@ -38,10 +41,15 @@ class PrepareCNC:
         self.window_size = int(round(sampling_frequency * sample_time))
         self.norm_method = norm_method
         self.resampled_size = resampled_size
+        self.train_size = float(train_size)
+        self.val_size = float(val_size)
+        self.test_size = float(test_size)
         self.seed = seed
         self.fewshot_seed = fewshot_seed
         self.machines = ("M01", "M02", "M03")
         self.label_map = {"good": 0, "bad": 1}
+        if abs((self.train_size + self.val_size + self.test_size) - 1.0) > 1e-6:
+            raise ValueError("train_size + val_size + test_size must equal 1.0.")
 
     def prepare_dataset(self):
         for machine in self.machines:
@@ -53,6 +61,9 @@ class PrepareCNC:
             groups,
             seed=self.seed,
             fewshot_seed=self.fewshot_seed,
+            train_ratio=self.train_size,
+            val_ratio=self.val_size,
+            test_ratio=self.test_size,
         )
         dataset_name = machine
         machine_save_dir = self.save_dir / dataset_name
@@ -69,11 +80,11 @@ class PrepareCNC:
                 machine_save_dir / f"{split_name}.parquet",
             )
 
-        print(
-            f"{dataset_name}: saved train_1p={len(split_indices['train_1p'])}, "
-            f"val={len(split_indices['val'])}, test={len(split_indices['test'])} "
-            f"to {machine_save_dir}"
+        counts = ", ".join(
+            f"{split_name}={len(indices)}"
+            for split_name, indices in split_indices.items()
         )
+        print(f"{dataset_name}: saved finetune splits {counts} to {machine_save_dir}")
 
     def prepare_CNC_dataset(self):
         self.prepare_dataset()
@@ -153,7 +164,7 @@ def split_finetune_indices(
         grouped[group].append(idx)
 
     train_full = []
-    splits = {"train_1p": [], "val": [], "test": []}
+    splits = {"train": [], "train_1p": [], "val": [], "test": []}
     for indices in grouped.values():
         indices = np.asarray(indices, dtype=np.int64)
         rng.shuffle(indices)
@@ -175,6 +186,7 @@ def split_finetune_indices(
         splits["val"].extend(indices[n_train_full : n_train_full + n_val])
         splits["test"].extend(indices[n_train_full + n_val :])
 
+    splits["train"] = train_full
     splits["train_1p"] = sample_fewshot_train(
         train_full,
         groups,

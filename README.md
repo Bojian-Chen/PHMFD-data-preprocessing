@@ -71,13 +71,13 @@ huggingface-cli download bojian1/PHMFD-data \
 
 | 数据集 | 数据集类型 | 采样频率 | 原始通道数 | 使用的通道 | 来源 link | 引用文献 bib |
 | --- | --- | --- | --- | --- | --- | --- |
-| `CNC` | 工业/CNC 加工 | 2 kHz | 3 | `vibration_data` 全部 3 通道 |  |  |
-| `CWRU` | 轴承 | 12 kHz | 2 | `DE_time`, `FE_time` | [CWRU Bearing Data Center](https://engineering.case.edu/content/bearing-data-center) |  |
-| `FEMTO` | 轴承 | 25.6 kHz | 6 | CSV 第 5、6 列加速度通道 | [NASA PCoE Data Repository](https://www.nasa.gov/content/prognostics-center-of-excellence-data-set-repository) |  |
+| `CNC` | 工业/CNC 加工 | 2 kHz | 3 | `vibration_data` 全部 3 通道 | [Github](https://github.com/boschresearch/CNC_Machining/tree/main) | [Ref](https://www.sciencedirect.com/science/article/pii/S2212827122002384) |
+| `CWRU` | 轴承 | 12/48 kHz (只用了12 kHz) | 2 | `DE_time`, `FE_time` | [CWRU Bearing Data Center](https://engineering.case.edu/bearingdatacenter/download-data-file) | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327015002034) |
+| `FEMTO` | 轴承 | 25.6 kHz | 6 | CSV 第 5、6 列加速度通道 | [Github](https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset) | [Ref](https://hal.science/hal-00719503/) |
 | `HITSM` | 轴承 | 51.2 kHz | 1 | `.mat` 信号通道 |  |  |
 | `IMS_FD` | 轴承 | 20.48 kHz | 1st test: 8；2nd test: 4 | `bearing1_1`, `bearing1_3`, `bearing1_4`, `bearing2_1` 对应列 | [NASA IMS Bearings](https://data.nasa.gov/dataset/ims-bearings) | `Qiu2006` |
 | `JNU` | 轴承 | 50 kHz | 1 | 垂直方向振动信号 | [JNU-Bearing-Dataset](https://github.com/ClarkGableWang/JNU-Bearing-Dataset) |  |
-| `KAIST` | 轴承 | 25.6 kHz | 4 | `bearingA_x`, `bearingA_y`, `bearingB_x`, `bearingB_y` |  |  |
+| `KAIST` | 轴承 | 25.6 kHz | 4 | `bearingA_x`, `bearingA_y`, `bearingB_x`, `bearingB_y` |[Part1](https://data.mendeley.com/datasets/vxkj334rzv/7) [Part2](https://data.mendeley.com/datasets/x3vhp8t6hg/7) [Part3](https://data.mendeley.com/datasets/j8d8pfkvj2/4) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340923001671) |
 | `MFPT` | 轴承 | 97656/48828 | 1 | `bearing` 结构中的振动信号 | [MFPT Fault Data Sets](https://www.mfpt.org/fault-data-sets/) |  |
 | `PU` | 轴承 | 64 kHz | 1 | `Y` 结构中的振动信号 | [Paderborn Bearing DataCenter](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter) | `Lessmeier2016` |
 | `TORINO` | 轴承 | 51.2 kHz | 6 | `.mat` 中全部 6 个通道 |  |  |
@@ -184,6 +184,7 @@ Process_data/Pretrain/<dataset>/
 
 ```text
 Process_data/Finetune/<dataset>/
+├── train.parquet
 ├── train_1p.parquet
 ├── val.parquet
 └── test.parquet
@@ -233,6 +234,6 @@ DATASET_CONFIG = {
 `data_scripts/` 下提供了两个扩展示例：
 
 - `example_pretrain.py`：pretrain 数据集模板，输出 `train.parquet`、`val.parquet`、`test.parquet`。
-- `example_finetune.py`：finetune 数据集模板，输出 `train_1p.parquet`、`val.parquet`、`test.parquet`，并演示 `fewshot_seed` 的使用。
+- `example_finetune.py`：finetune 数据集模板，输出 `train.parquet`、`train_1p.parquet`、`val.parquet`、`test.parquet`，并演示 `fewshot_seed` 的使用。
 
 这两个示例默认不注册到 `DATASET_MODULES`，不会被 `python main.py --datasets all` 执行。

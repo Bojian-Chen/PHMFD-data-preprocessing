@@ -1,7 +1,12 @@
 dataset_analysis/
-Process_data/*
+Process_data/Pretrain/*
+Process_data/Finetune/*
+# Raw_data/Pretrain/*
+# Raw_data/Finetune/*
 Raw_data/*
 *.ipynb
 dataset_analysis_reports
 *.pyc
 hf_upload/
+Process_data_UniFault/
+Rawdata_tar/

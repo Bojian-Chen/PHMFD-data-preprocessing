@@ -135,7 +135,7 @@ def split_finetune_indices(
         grouped[group].append(idx)
 
     train_full = []
-    splits = {"train_1p": [], "val": [], "test": []}
+    splits = {"train": [], "train_1p": [], "val": [], "test": []}
     for indices in grouped.values():
         indices = np.asarray(indices, dtype=np.int64)
         rng.shuffle(indices)
@@ -153,6 +153,7 @@ def split_finetune_indices(
         splits["val"].extend(indices[n_train : n_train + n_val])
         splits["test"].extend(indices[n_train + n_val :])
 
+    splits["train"] = train_full
     splits["train_1p"] = sample_fewshot_train(
         train_full,
         groups,

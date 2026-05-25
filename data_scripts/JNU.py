@@ -84,11 +84,11 @@ class JNUFinetuneProcessor:
                 self.save_dir / f"{split_name}.parquet",
             )
 
-        print(
-            f"{self.dataset_name}: saved train_1p={len(split_indices['train_1p'])}, "
-            f"val={len(split_indices['val'])}, test={len(split_indices['test'])} "
-            f"to {self.save_dir}"
+        counts = ", ".join(
+            f"{split_name}={len(indices)}"
+            for split_name, indices in split_indices.items()
         )
+        print(f"{self.dataset_name}: saved finetune splits {counts} to {self.save_dir}")
 
     def load_samples(self):
         if not self.raw_dir.exists():
@@ -160,7 +160,7 @@ def split_finetune_indices(
         grouped[group].append(idx)
 
     train_full = []
-    splits = {"train_1p": [], "val": [], "test": []}
+    splits = {"train": [], "train_1p": [], "val": [], "test": []}
     for indices in grouped.values():
         indices = np.asarray(indices, dtype=np.int64)
         rng.shuffle(indices)
@@ -178,6 +178,7 @@ def split_finetune_indices(
         splits["val"].extend(indices[n_train : n_train + n_val])
         splits["test"].extend(indices[n_train + n_val :])
 
+    splits["train"] = train_full
     splits["train_1p"] = sample_fewshot_train(
         train_full,
         groups,

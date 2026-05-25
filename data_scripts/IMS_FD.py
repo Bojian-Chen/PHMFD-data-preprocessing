@@ -27,6 +27,9 @@ class IMS_FD:
         sampling_frequency=20480,
         norm_method="none",
         resampled_size=None,
+        train_size=0.6,
+        val_size=0.2,
+        test_size=0.2,
         seed=42,
     ):
         self.dataset_name = DATASET_CONFIG["save_folder"]
@@ -37,7 +40,12 @@ class IMS_FD:
         self.window_size = int(round(sampling_frequency * sample_time))
         self.norm_method = norm_method
         self.resampled_size = resampled_size
+        self.train_size = float(train_size)
+        self.val_size = float(val_size)
+        self.test_size = float(test_size)
         self.seed = seed
+        if abs((self.train_size + self.val_size + self.test_size) - 1.0) > 1e-6:
+            raise ValueError("train_size + val_size + test_size must equal 1.0.")
 
         self.normal_range = ("2003.10.22.12.06.24", "2003.10.22.12.29.13")
         self.ir_range = ("2003.11.25.15.57.32", "2003.11.25.23.39.56")
@@ -46,7 +54,13 @@ class IMS_FD:
 
     def prepare_dataset(self):
         samples, labels, groups = self.load_samples()
-        split_indices = split_finetune_indices(groups, seed=self.seed)
+        split_indices = split_finetune_indices(
+            groups,
+            seed=self.seed,
+            train_ratio=self.train_size,
+            val_ratio=self.val_size,
+            test_ratio=self.test_size,
+        )
 
         for split_name, indices in split_indices.items():
             split_samples = samples[indices]
@@ -60,11 +74,11 @@ class IMS_FD:
                 self.save_dir / f"{split_name}.parquet",
             )
 
-        print(
-            f"{self.dataset_name}: saved train_1p={len(split_indices['train_1p'])}, "
-            f"val={len(split_indices['val'])}, test={len(split_indices['test'])} "
-            f"to {self.save_dir}"
+        counts = ", ".join(
+            f"{split_name}={len(indices)}"
+            for split_name, indices in split_indices.items()
         )
+        print(f"{self.dataset_name}: saved finetune splits {counts} to {self.save_dir}")
 
     def load_samples(self):
         all_samples = []
@@ -148,46 +162,67 @@ def segment_signal(signal, window_size):
 
 
 def split_finetune_indices(
-    groups, seed=42, train_ratio=0.01, val_ratio=0.2, test_ratio=0.2
+    groups,
+    seed=42,
+    train_ratio=0.6,
+    val_ratio=0.2,
+    test_ratio=0.2,
+    tiny_train_ratio=0.01,
 ):
     rng = np.random.default_rng(seed)
     grouped = defaultdict(list)
     for idx, group in enumerate(groups):
         grouped[group].append(idx)
 
-    splits = {"train_1p": [], "val": [], "test": []}
+    train_full = []
+    splits = {"train": [], "train_1p": [], "val": [], "test": []}
     for indices in grouped.values():
         indices = np.asarray(indices, dtype=np.int64)
         rng.shuffle(indices)
         n_total = len(indices)
-        n_train = max(1, int(np.ceil(n_total * train_ratio)))
+        n_train = max(1, int(np.floor(n_total * train_ratio)))
         n_val = (
             max(1, int(np.floor(n_total * val_ratio)))
             if n_total - n_train > 1
             else max(0, n_total - n_train)
         )
-        n_test = (
-            max(1, int(np.floor(n_total * test_ratio)))
-            if n_total - n_train - n_val > 0
-            else 0
-        )
-
-        while n_train + n_val + n_test > n_total:
-            if n_test > 0:
-                n_test -= 1
-            elif n_val > 0:
+        while n_train + n_val > n_total:
+            if n_val > 0:
                 n_val -= 1
             else:
                 n_train -= 1
 
-        splits["train_1p"].extend(indices[:n_train])
+        train_full.extend(indices[:n_train])
         splits["val"].extend(indices[n_train : n_train + n_val])
-        splits["test"].extend(indices[n_train + n_val : n_train + n_val + n_test])
+        splits["test"].extend(indices[n_train + n_val :])
 
+    splits["train"] = train_full
+    splits["train_1p"] = sample_fewshot_train(
+        train_full,
+        groups,
+        tiny_train_ratio,
+        seed,
+    )
     for split_name in splits:
         splits[split_name] = np.asarray(splits[split_name], dtype=np.int64)
         rng.shuffle(splits[split_name])
     return splits
+
+
+def sample_fewshot_train(train_indices, groups, fraction, seed):
+    rng = np.random.default_rng(seed)
+    by_group = defaultdict(list)
+    for idx in train_indices:
+        by_group[groups[int(idx)]].append(int(idx))
+
+    sampled = []
+    for group in sorted(by_group):
+        indices = np.asarray(by_group[group], dtype=np.int64)
+        group_target = max(1, int(np.floor(len(indices) * fraction)))
+        group_target = min(group_target, len(indices))
+        chosen_idx = rng.choice(len(indices), size=group_target, replace=False)
+        sampled.extend(indices[chosen_idx].tolist())
+    return sorted(sampled)
 
 
 def normalize_per_sample(samples, norm_method):
