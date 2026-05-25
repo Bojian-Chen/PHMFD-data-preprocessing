@@ -15,7 +15,7 @@ DATASET_CONFIG = {
     "method": "prepare_dataset",
     "task": "finetune",
     "raw_folders": ("CNC",),
-    "save_folder": "CNC",
+    "save_folder": "",
 }
 
 
@@ -31,7 +31,6 @@ class PrepareCNC:
         seed=42,
         fewshot_seed=20260504,
     ):
-        self.dataset_name = DATASET_CONFIG["save_folder"]
         self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
         self.save_dir = Path(save_dir) if save_dir is not None else default_save_dir()
         self.sample_time = sample_time
@@ -55,7 +54,8 @@ class PrepareCNC:
             seed=self.seed,
             fewshot_seed=self.fewshot_seed,
         )
-        machine_save_dir = self.save_dir / machine
+        dataset_name = machine
+        machine_save_dir = self.save_dir / dataset_name
 
         for split_name, indices in split_indices.items():
             split_samples = samples[indices]
@@ -65,12 +65,12 @@ class PrepareCNC:
             save_parquet(
                 split_samples,
                 split_labels,
-                self.dataset_name,
+                dataset_name,
                 machine_save_dir / f"{split_name}.parquet",
             )
 
         print(
-            f"{self.dataset_name} {machine}: saved train_1p={len(split_indices['train_1p'])}, "
+            f"{dataset_name}: saved train_1p={len(split_indices['train_1p'])}, "
             f"val={len(split_indices['val'])}, test={len(split_indices['test'])} "
             f"to {machine_save_dir}"
         )
@@ -300,7 +300,10 @@ def default_raw_dir():
 
 
 def default_save_dir():
-    return Path("Process_Data") / DATASET_CONFIG["save_folder"]
+    save_folder = DATASET_CONFIG["save_folder"]
+    if save_folder:
+        return Path("Process_Data") / save_folder
+    return Path("Process_Data")
 
 
 Prepare_CNC = PrepareCNC

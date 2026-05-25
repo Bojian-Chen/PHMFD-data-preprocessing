@@ -8,9 +8,9 @@
 
 - 数据仓库：[bojian1/PHMFD-data](https://huggingface.co/datasets/bojian1/PHMFD-data/)
 - 处理后数据目录：`Process_Data/`
-- 重新预处理时的默认原始数据目录：`Raw_data/UniFault/`
+- 重新预处理时的默认原始数据目录：`Raw_data/`
 
-如只需要使用处理好的数据，可以直接下载 Hugging Face 仓库中的 `Process_Data/`。如需重新运行本仓库的预处理脚本，请将原始数据保持在 `Raw_data/UniFault/<dataset_name>/` 结构下。
+如只需要使用处理好的数据，可以直接下载 Hugging Face 仓库中的 `Process_Data/`。如需重新运行本仓库的预处理脚本，请将原始数据保持在 `Raw_data/<dataset_name>/` 结构下。
 
 ```bash
 pip install -U huggingface_hub
@@ -33,27 +33,27 @@ huggingface-cli download bojian1/PHMFD-data \
 .
 ├── main.py                 # 统一调度入口
 ├── data_scripts/           # 各数据集预处理脚本
-├── Raw_data/UniFault/      # 默认原始数据根目录
+├── Raw_data/               # 默认原始数据根目录
 ├── Process_Data/           # 默认处理后数据输出目录
 └── README.md
 ```
 
 ## 支持的数据集
 
-下表中的原始目录均相对于 `--raw-root`，默认 `--raw-root Raw_data/UniFault`；输出目录均相对于 `--save-root`，默认 `--save-root Process_Data`。
+下表中的原始目录均相对于 `--raw-root`，默认 `--raw-root Raw_data`；输出目录均相对于 `--save-root`，默认 `--save-root Process_Data`。
 
 | 名称 | 原始目录候选 | 输出目录 | 任务类型 |
 | --- | --- | --- | --- |
-| `CNC` | `CNC` | `CNC` | finetune |
+| `CNC` | `CNC` | `M01`, `M02`, `M03` | finetune |
 | `CWRU` | `CWRU` | `CWRU` | pretrain |
 | `FEMTO` | `FEMTO` | `FEMTO` | pretrain |
-| `HITSM` | `HIT-SM`, `HITSM` | `HITSM` | pretrain |
+| `HITSM` | `HIT-SM`, `HITSM` | `HITSM_self_built`, `HITSM_SpectraQuest` | pretrain |
 | `IMS_FD` | `IMS`, `IMS_FD` | `IMS_FD` | finetune |
 | `KAIST` | `KAIST` | `KAIST1`, `KAIST2`, ... | pretrain |
 | `MFPT` | `MFPT` | `MFPT` | pretrain |
 | `PU` | `PU`, `RM_027_PU` | `PU` | finetune |
 | `TORINO` | `DIRG`, `TORINO` | `TORINO` | pretrain |
-| `UO` | `UO`, `UniFault_rawdata/UO` | `UO` | pretrain |
+| `UO` | `UO` | `UO` | pretrain |
 | `XJTUSY` | `XJTU-SY`, `XJTUSY` | `XJTUSY` | pretrain |
 
 `main.py` 会在候选原始目录中优先使用实际存在的目录。`KAIST` 会根据原始数据中的完整 CSV 子集自动生成 `KAIST1`、`KAIST2` 等输出目录。
@@ -98,7 +98,7 @@ python main.py --datasets CWRU PU IMS_FD
 ```bash
 python main.py \
   --datasets PU \
-  --raw-root Raw_data/UniFault \
+  --raw-root Raw_data \
   --save-root Process_Data
 ```
 
@@ -129,7 +129,7 @@ python main.py --datasets all --continue-on-error
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |
 | `--datasets` | `all` | 要处理的数据集，支持 `all` 或多个数据集名 |
-| `--raw-root` | `Raw_data/UniFault` | 原始数据根目录 |
+| `--raw-root` | `Raw_data` | 原始数据根目录 |
 | `--save-root` | `Process_Data` | 处理后数据输出根目录 |
 | `--sample-time` | `0.1` | 每个样本窗口长度，单位秒 |
 | `--norm-method` | `minmax` | 归一化方式，可选 `none`、`minmax`、`zscore` |

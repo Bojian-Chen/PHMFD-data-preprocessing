@@ -14,7 +14,7 @@ DATASET_CONFIG = {
     "method": "process_data",
     "task": "pretrain",
     "raw_folders": ("HIT-SM", "HITSM"),
-    "save_folder": "HITSM",
+    "save_folder": "",
 }
 
 
@@ -23,7 +23,7 @@ class HITSM:
         self,
         args=None,
         data_dir=Path("Raw_data") / "HIT-SM",
-        save_dir=Path("Process_Data") / "HITSM",
+        save_dir=Path("Process_Data"),
         desired_duration_sec=0.1,
         sampling_frequency=51200,
         resampled_size=None,
@@ -36,9 +36,7 @@ class HITSM:
         if args is not None:
             data_root = Path(getattr(args, "raw_dir", Path("Raw_data")))
             data_dir = data_root / "HIT-SM"
-            save_dir = (
-                Path(getattr(args, "processed_dir", Path("Process_Data"))) / "HITSM"
-            )
+            save_dir = Path(getattr(args, "processed_dir", Path("Process_Data")))
             norm_method = getattr(args, "norm_method", norm_method)
             desired_duration_sec = getattr(
                 args, "desired_duration_sec", desired_duration_sec
@@ -268,7 +266,7 @@ def load_parquet_data(path):
 if __name__ == "__main__":
     processor = HITSM(
         data_dir=Path("Raw_data") / "HIT-SM",
-        save_dir=Path("Process_Data") / "HITSM",
+        save_dir=Path("Process_Data"),
         desired_duration_sec=0.1,
         sampling_frequency=51200,
         resampled_size=None,

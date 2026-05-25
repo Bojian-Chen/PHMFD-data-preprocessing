@@ -10,6 +10,11 @@ from scipy.signal import resample
 
 FAULT_TYPES = ["normal", "ball", "inner", "outer"]
 CSV_INDICES = [0, 1, 2]
+KAIST_PARTS = (
+    ("KAIST1", "part1", (0, 1, 2)),
+    ("KAIST2", "part2", (3, 4)),
+    ("KAIST3", "part3", (5, 6)),
+)
 DATASET_CONFIG = {
     "target": "process_all_kaist_parts",
     "task": "pretrain",
@@ -31,6 +36,7 @@ class KAISTProcessor:
         val_size=0.2,
         test_size=0.2,
         seed=42,
+        csv_indices=None,
     ) -> None:
         self.raw_dir = Path(raw_dir)
         self.save_path = Path(save_path)
@@ -48,6 +54,7 @@ class KAISTProcessor:
         self.val_size = float(val_size)
         self.test_size = float(test_size)
         self.seed = int(seed)
+        self.csv_indices = tuple(csv_indices) if csv_indices is not None else tuple(CSV_INDICES)
 
         if self.window_size <= 0:
             raise ValueError("window_size must be positive.")
@@ -57,7 +64,6 @@ class KAISTProcessor:
             raise ValueError("train_size + val_size + test_size must equal 1.0.")
 
         self.csv_fault_types = FAULT_TYPES
-        self.csv_indices = CSV_INDICES
 
     def process(self):
         return self.process_data()
@@ -107,38 +113,21 @@ class KAISTProcessor:
                 f"KAIST data directory does not exist: {self.raw_dir}"
             )
 
-        roots = [self.raw_dir]
-        roots.extend(path for path in sorted(self.raw_dir.iterdir()) if path.is_dir())
-
         files = []
         missing_files = []
-        selected_root = None
-        for root in roots:
-            candidate_files = []
-            candidate_missing = []
-            for fault_type in self.csv_fault_types:
-                for index in self.csv_indices:
-                    file_path = root / f"vibration_{fault_type}_{index}.csv"
-                    if file_path.exists():
-                        candidate_files.append(file_path)
-                    else:
-                        candidate_missing.append(str(file_path))
-            if candidate_files and not candidate_missing:
-                selected_root = root
-                files = candidate_files
-                break
-            if candidate_files:
-                missing_files = candidate_missing
+        for fault_type in self.csv_fault_types:
+            for index in self.csv_indices:
+                file_path = self.raw_dir / f"vibration_{fault_type}_{index}.csv"
+                if file_path.exists():
+                    files.append(file_path)
+                else:
+                    missing_files.append(str(file_path))
 
-        if not files:
-            if missing_files:
-                missing = "\n".join(missing_files)
-                raise FileNotFoundError(f"Incomplete KAIST csv files:\n{missing}")
-            raise RuntimeError(
-                f"No KAIST vibration csv files found under {self.raw_dir}"
-            )
+        if missing_files:
+            missing = "\n".join(missing_files)
+            raise FileNotFoundError(f"Incomplete KAIST csv files:\n{missing}")
 
-        print(f"Using KAIST csv root: {selected_root}")
+        print(f"Using KAIST csv root: {self.raw_dir}")
         return files
 
     def read_signal(self, file_path):
@@ -241,21 +230,13 @@ def load_parquet_data(path):
     return samples, labels
 
 
-def has_complete_kaist_csv_set(root):
+def has_complete_kaist_csv_set(root, csv_indices=CSV_INDICES):
     root = Path(root)
     return all(
         (root / f"vibration_{fault_type}_{index}.csv").exists()
         for fault_type in FAULT_TYPES
-        for index in CSV_INDICES
+        for index in csv_indices
     )
-
-
-def kaist_output_name(raw_part_dir, fallback_index):
-    name = raw_part_dir.name.lower()
-    digits = "".join(char for char in name if char.isdigit())
-    if digits:
-        return f"KAIST{int(digits)}"
-    return f"KAIST{fallback_index}"
 
 
 def find_kaist_parts(raw_root):
@@ -263,27 +244,17 @@ def find_kaist_parts(raw_root):
     if not raw_root.exists():
         raise FileNotFoundError(f"KAIST data directory does not exist: {raw_root}")
 
-    if has_complete_kaist_csv_set(raw_root):
-        return [("KAIST1", raw_root)]
-
-    candidate_roots = []
-    for path in sorted(raw_root.rglob("*")):
-        if path.is_dir() and has_complete_kaist_csv_set(path):
-            candidate_roots.append(path)
-
-    if not candidate_roots:
-        raise RuntimeError(
-            f"No complete KAIST vibration csv set found under {raw_root}"
-        )
-
     parts = []
-    used_names = set()
-    for fallback_index, part_dir in enumerate(candidate_roots, start=1):
-        output_name = kaist_output_name(part_dir, fallback_index)
-        if output_name in used_names:
-            output_name = f"KAIST{fallback_index}"
-        used_names.add(output_name)
-        parts.append((output_name, part_dir))
+    if has_complete_kaist_csv_set(raw_root):
+        parts.append(("KAIST1", raw_root, tuple(CSV_INDICES)))
+
+    for output_name, folder_name, csv_indices in KAIST_PARTS:
+        part_dir = raw_root / folder_name
+        if part_dir.exists() and has_complete_kaist_csv_set(part_dir, csv_indices):
+            parts.append((output_name, part_dir, tuple(csv_indices)))
+
+    if not parts:
+        raise RuntimeError(f"No complete KAIST vibration csv set found under {raw_root}")
     return parts
 
 
@@ -300,7 +271,7 @@ def process_all_kaist_parts(
     seed=42,
 ):
     outputs = {}
-    for output_name, part_dir in find_kaist_parts(raw_root):
+    for output_name, part_dir, csv_indices in find_kaist_parts(raw_root):
         print(f"Processing {output_name} from {part_dir}")
         processor = KAISTProcessor(
             raw_dir=part_dir,
@@ -313,6 +284,7 @@ def process_all_kaist_parts(
             val_size=val_size,
             test_size=test_size,
             seed=seed,
+            csv_indices=csv_indices,
         )
         outputs[output_name] = processor.process_data()
     return outputs

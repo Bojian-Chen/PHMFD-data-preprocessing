@@ -13,7 +13,7 @@ DATASET_CONFIG = {
     "target": "UOBearingPreprocessor",
     "method": "process",
     "task": "pretrain",
-    "raw_folders": ("UO", "UniFault_rawdata/UO"),
+    "raw_folders": ("UO",),
     "save_folder": "UO",
 }
 
@@ -250,7 +250,7 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = UOBearingPreprocessor(
-        data_root=Path("Raw_data") / "UniFault_rawdata" / "UO",
+        data_root=Path("Raw_data") / "UO",
         save_root=Path("Process_Data") / "UO",
         time_interval=0.1,
         norm="minmax",

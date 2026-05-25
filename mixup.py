@@ -9,13 +9,16 @@ import torch
 
 
 DEFAULT_DATASETS = (
-    "UO",
-    "HITSM/HITSM_self_built",
-    "HITSM/HITSM_SpectraQuest",
+    "HITSM_self_built",
+    "HITSM_SpectraQuest",
     "KAIST1",
+    "KAIST2",
+    "KAIST3",
     "CWRU",
     "TORINO",
     "XJTUSY",
+    "MFPT",
+    "FEMTO"
 )
 DEFAULT_TRAIN_FILES = ("train.parquet",)
 
