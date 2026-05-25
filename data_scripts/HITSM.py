@@ -22,8 +22,8 @@ class HITSM:
     def __init__(
         self,
         args=None,
-        data_dir=Path("Raw_data") / "HIT-SM",
-        save_dir=Path("Process_Data"),
+        data_dir=Path("Raw_data") / "Pretrain" / "HIT-SM",
+        save_dir=Path("Process_data") / "Pretrain",
         desired_duration_sec=0.1,
         sampling_frequency=51200,
         resampled_size=None,
@@ -35,8 +35,8 @@ class HITSM:
     ) -> None:
         if args is not None:
             data_root = Path(getattr(args, "raw_dir", Path("Raw_data")))
-            data_dir = data_root / "HIT-SM"
-            save_dir = Path(getattr(args, "processed_dir", Path("Process_Data")))
+            data_dir = data_root / "Pretrain" / "HIT-SM"
+            save_dir = Path(getattr(args, "processed_dir", Path("Process_data"))) / "Pretrain"
             norm_method = getattr(args, "norm_method", norm_method)
             desired_duration_sec = getattr(
                 args, "desired_duration_sec", desired_duration_sec
@@ -265,8 +265,8 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = HITSM(
-        data_dir=Path("Raw_data") / "HIT-SM",
-        save_dir=Path("Process_Data"),
+        data_dir=Path("Raw_data") / "Pretrain" / "HIT-SM",
+        save_dir=Path("Process_data") / "Pretrain",
         desired_duration_sec=0.1,
         sampling_frequency=51200,
         resampled_size=None,

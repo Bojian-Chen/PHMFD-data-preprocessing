@@ -21,8 +21,8 @@ DATASET_CONFIG = {
 class TorinoBearingPreprocessor:
     def __init__(
         self,
-        data_root=Path("Raw_data") / "DIRG",
-        save_root=Path("Process_Data") / "TORINO",
+        data_root=Path("Raw_data") / "Pretrain" / "TORINO",
+        save_root=Path("Process_data") / "Pretrain" / "TORINO",
         time_interval=0.1,
         norm="none",
         sampling_frequency=51200,
@@ -226,8 +226,8 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = TorinoBearingPreprocessor(
-        data_root=Path("Raw_data") / "DIRG",
-        save_root=Path("Process_Data") / "TORINO",
+        data_root=Path("Raw_data") / "Pretrain" / "TORINO",
+        save_root=Path("Process_data") / "Pretrain" / "TORINO",
         time_interval=0.1,
         norm="minmax",
         resampled_size=1024,

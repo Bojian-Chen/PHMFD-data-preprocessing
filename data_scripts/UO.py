@@ -21,8 +21,8 @@ DATASET_CONFIG = {
 class UOBearingPreprocessor:
     def __init__(
         self,
-        data_root=Path("Raw_data") / "UO",
-        save_root=Path("Process_Data") / "UO",
+        data_root=Path("Raw_data") / "Pretrain" / "UO",
+        save_root=Path("Process_data") / "Pretrain" / "UO",
         time_interval=0.1,
         norm="none",
         sampling_frequency=200000,
@@ -250,8 +250,8 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = UOBearingPreprocessor(
-        data_root=Path("Raw_data") / "UO",
-        save_root=Path("Process_Data") / "UO",
+        data_root=Path("Raw_data") / "Pretrain" / "UO",
+        save_root=Path("Process_data") / "Pretrain" / "UO",
         time_interval=0.1,
         norm="minmax",
         resampled_size=1024,

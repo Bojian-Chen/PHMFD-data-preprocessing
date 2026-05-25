@@ -19,8 +19,8 @@ DATASET_CONFIG = {
 class ExamplePretrainProcessor:
     def __init__(
         self,
-        raw_dir=Path("Raw_data") / "ExamplePretrain",
-        save_dir=Path("Process_Data") / "ExamplePretrain",
+        raw_dir=Path("Raw_data") / "Pretrain" / "ExamplePretrain",
+        save_dir=Path("Process_data") / "Pretrain" / "ExamplePretrain",
         sample_time=0.1,
         sampling_frequency=1000,
         norm_method="none",

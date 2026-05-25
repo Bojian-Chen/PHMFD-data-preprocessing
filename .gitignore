@@ -1,6 +1,5 @@
 dataset_analysis/
 Process_data/*
-Process_Data/*
 Raw_data/*
 *.ipynb
 dataset_analysis_reports

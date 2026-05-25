@@ -22,8 +22,8 @@ class FEMTO_pretrain:
     def __init__(
         self,
         args=None,
-        data_dir=Path("Raw_data") / "FEMTO",
-        save_dir=Path("Process_Data") / "FEMTO",
+        data_dir=Path("Raw_data") / "Pretrain" / "FEMTO",
+        save_dir=Path("Process_data") / "Pretrain" / "FEMTO",
         desired_duration_sec=0.1,
         sampling_frequency=25600,
         resampled_size=None,
@@ -34,9 +34,9 @@ class FEMTO_pretrain:
         seed=42,
     ) -> None:
         if args is not None:
-            data_dir = Path(getattr(args, "raw_dir", Path("Raw_data"))) / "FEMTO"
+            data_dir = Path(getattr(args, "raw_dir", Path("Raw_data"))) / "Pretrain" / "FEMTO"
             save_dir = (
-                Path(getattr(args, "processed_dir", Path("Process_Data"))) / "FEMTO"
+                Path(getattr(args, "processed_dir", Path("Process_data"))) / "Pretrain" / "FEMTO"
             )
             norm_method = getattr(args, "norm_method", norm_method)
             desired_duration_sec = getattr(
@@ -281,8 +281,8 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = FEMTO_pretrain(
-        data_dir=Path("Raw_data") / "FEMTO",
-        save_dir=Path("Process_Data") / "FEMTO",
+        data_dir=Path("Raw_data") / "Pretrain" / "FEMTO",
+        save_dir=Path("Process_data") / "Pretrain" / "FEMTO",
         desired_duration_sec=0.1,
         sampling_frequency=25600,
         resampled_size=None,

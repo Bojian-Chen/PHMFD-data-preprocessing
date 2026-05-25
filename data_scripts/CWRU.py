@@ -22,7 +22,7 @@ DATASET_CONFIG = {
 class PrepareCWRU:
     def __init__(
         self,
-        data_dir=Path("Raw_data") / "CWRU",
+        data_dir=Path("Raw_data") / "Pretrain" / "CWRU",
         desired_duration_sec=0.1,
         stride=None,
         norm_method="none",
@@ -69,7 +69,7 @@ class PrepareCWRU:
         self.parquet_save_path = (
             Path(save_dir)
             if save_dir
-            else Path("Process_Data")
+            else Path("Process_data") / "Pretrain"
             / norm_dir
             / "multi_scale"
             / f"CWRU_{self.desired_duration_sec:g}s"
@@ -298,13 +298,13 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = PrepareCWRU(
-        data_dir=Path("Raw_data") / "CWRU",
+        data_dir=Path("Raw_data") / "Pretrain" / "CWRU",
         desired_duration_sec=0.1,
         sampling_frequency=12000,
         resampled_size=None,
         stride=None,
         norm_method="none",
-        save_dir=Path("Process_Data") / "CWRU",
+        save_dir=Path("Process_data") / "Pretrain" / "CWRU",
         train_size=0.6,
         val_size=0.2,
         test_size=0.2,

@@ -7,7 +7,7 @@ from data_scripts import DATASET_ALIASES, DATASET_MODULES
 
 
 DEFAULT_RAW_ROOT = Path("Raw_data")
-DEFAULT_SAVE_ROOT = Path("Process_Data")
+DEFAULT_SAVE_ROOT = Path("Process_data")
 DEFAULT_SAMPLE_TIME = 0.1
 DEFAULT_NORM_METHOD = "none"
 DEFAULT_RESAMPLED_SIZE = None
@@ -47,17 +47,37 @@ def resampled_size_or_default(value):
     return value
 
 
-def first_existing_path(root, folder_names):
-    root = Path(root)
-    candidates = [root / folder_name for folder_name in folder_names]
+def task_folder(config):
+    task = config.get("task")
+    if task == "pretrain":
+        return "Pretrain"
+    if task == "finetune":
+        return "Finetune"
+    raise ValueError(f"Unknown dataset task: {task}")
+
+
+def first_existing_path(roots, folder_names):
+    if isinstance(roots, (str, Path)):
+        roots = (roots,)
+    roots = tuple(Path(root) for root in roots)
+    candidates = [
+        root / folder_name
+        for root in roots
+        for folder_name in folder_names
+    ]
     for candidate in candidates:
         if candidate.exists():
             return candidate
     return candidates[0]
 
 
+def dataset_raw_roots(args, config):
+    raw_root = Path(args.raw_root)
+    return (raw_root / task_folder(config), raw_root)
+
+
 def dataset_save_path(args, config):
-    save_root = Path(args.save_root)
+    save_root = Path(args.save_root) / task_folder(config)
     save_folder = config.get("save_folder")
     if save_folder:
         return save_root / save_folder
@@ -73,7 +93,10 @@ def load_dataset_config(dataset_name):
 
 def unified_values(args, config):
     values = {
-        "raw_path": first_existing_path(args.raw_root, config["raw_folders"]),
+        "raw_path": first_existing_path(
+            dataset_raw_roots(args, config),
+            config["raw_folders"],
+        ),
         "save_path": dataset_save_path(args, config),
         "sample_time": value_or_default(args.sample_time, DEFAULT_SAMPLE_TIME),
         "norm_method": value_or_default(args.norm_method, DEFAULT_NORM_METHOD),

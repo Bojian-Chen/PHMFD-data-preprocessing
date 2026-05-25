@@ -296,14 +296,14 @@ def save_parquet(samples, labels, dataset_name, save_path):
 
 
 def default_raw_dir():
-    return Path("Raw_data") / DATASET_CONFIG["raw_folders"][0]
+    return Path("Raw_data") / "Finetune" / DATASET_CONFIG["raw_folders"][0]
 
 
 def default_save_dir():
     save_folder = DATASET_CONFIG["save_folder"]
     if save_folder:
-        return Path("Process_Data") / save_folder
-    return Path("Process_Data")
+        return Path("Process_data") / "Finetune" / save_folder
+    return Path("Process_data") / "Finetune"
 
 
 Prepare_CNC = PrepareCNC

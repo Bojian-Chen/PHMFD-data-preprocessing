@@ -4,6 +4,7 @@ DATASET_MODULES = (
     "FEMTO",
     "HITSM",
     "IMS_FD",
+    "JNU",
     "KAIST",
     "MFPT",
     "PU",

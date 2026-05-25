@@ -11,9 +11,11 @@ PHMFD 指 PHM 基础模型。本仓库将多个机械故障诊断原始数据集
 ## 关键路径
 
 - 默认原始数据根目录以 `main.py` 为准：`DEFAULT_RAW_ROOT`，当前为 `Raw_data`
-- 默认输出目录：`Process_Data`
+- 默认输出目录：`Process_data`
+- 当前使用的数据集按任务分类：`Raw_data/Pretrain`、`Raw_data/Finetune`、`Process_data/Pretrain`、`Process_data/Finetune`
+- `mixup.py` 输出保持在 `Process_data/mixed`
 - 原始数据和处理后数据仓库：`https://huggingface.co/datasets/bojian1/PHMFD-data/`
-- 本地大数据目录通常不应提交：`Raw_data/`、`Process_Data/`
+- 本地大数据目录通常不应提交：`Raw_data/`、`Process_data/`
 
 如果 README 和代码默认值不一致，优先以 `main.py` 为准，并同步修 README。
 
@@ -33,8 +35,9 @@ DATASET_CONFIG = {
 
 `save_folder` 的含义：
 
-- 普通单输出数据集使用目录名，例如 `"CWRU"` 会输出到 `Process_Data/CWRU`。
-- 一个脚本拆成多个顶层数据集时使用空字符串 `""`，由脚本自己写入 `Process_Data/<dataset>`。
+- `main.py` 会根据 `task` 自动在 `Raw_data` 和 `Process_data` 下增加 `Pretrain` 或 `Finetune` 分类目录。
+- 普通单输出数据集使用目录名，例如 `"CWRU"` 会输出到 `Process_data/Pretrain/CWRU`，`"JNU"` 会输出到 `Process_data/Finetune/JNU`。
+- 一个脚本拆成多个顶层数据集时使用空字符串 `""`，由脚本自己写入 `Process_data/<Task>/<dataset>`。
 - 当前多输出脚本包括 `CNC`、`HITSM`、`KAIST`。
 
 `task` 使用：
@@ -48,9 +51,10 @@ DATASET_CONFIG = {
 
 当前特殊输出约定：
 
-- `CNC` 输出为 `Process_Data/M01`、`Process_Data/M02`、`Process_Data/M03`，不要加 `CNC_` 前缀，也不要再嵌套到 `Process_Data/CNC/`。
-- `HITSM` 输出为 `Process_Data/HITSM_self_built` 和 `Process_Data/HITSM_SpectraQuest`，不要再嵌套到 `Process_Data/HITSM/`。
-- `KAIST` 输出为 `Process_Data/KAIST1`、`Process_Data/KAIST2`、`Process_Data/KAIST3`；当前显式映射为 `part1 -> (0,1,2)`、`part2 -> (3,4)`、`part3 -> (5,6)`。
+- `CNC` 输出为 `Process_data/Finetune/M01`、`Process_data/Finetune/M02`、`Process_data/Finetune/M03`，不要加 `CNC_` 前缀，也不要再嵌套到 `Process_data/Finetune/CNC/`。
+- `HITSM` 输出为 `Process_data/Pretrain/HITSM_self_built` 和 `Process_data/Pretrain/HITSM_SpectraQuest`，不要再嵌套到 `Process_data/Pretrain/HITSM/`。
+- `JNU` 是 finetune 数据集，文件名前缀映射为 `n -> 0`、`ib -> 1`、`ob -> 2`、`tb -> 3`，工况按文件名中的 `600/800/1000` 分组。
+- `KAIST` 输出为 `Process_data/Pretrain/KAIST1`、`Process_data/Pretrain/KAIST2`、`Process_data/Pretrain/KAIST3`；当前显式映射为 `part1 -> (0,1,2)`、`part2 -> (3,4)`、`part3 -> (5,6)`。
 
 ## main.py 参数映射
 
@@ -74,10 +78,22 @@ Parquet 字段约定：
 
 预训练脚本一般保存一维样本，即写出前可对 `[N, 1, L]` 使用 `squeeze(1)`。微调脚本可保留标签列。
 
+## 数据集元信息维护
+
+`README.md` 中的“数据集元信息”表需要随代码和资料持续更新。新增数据集或确认已有数据集信息时，自动补充以下字段：
+
+- 数据集类型，例如轴承、齿轮、工业/CNC 加工等。
+- 采样频率，以脚本默认值和原始数据说明为准。
+- 原始通道数和实际使用通道，以 `data_scripts/*.py` 当前读取逻辑为准。
+- 来源 link，优先填官方数据页、作者仓库或可信数据仓库。
+- 引用文献 bib；未确认完整 BibTeX 时保持空白，不要编造。
+
+如果来源 link 或 bib 不确定，留空并继续推进当前任务。
+
 ## Mixup
 
-`mixup.py` 基于 `Process_Data` 中已有的 `train.parquet` 生成数据集两两组合文件，默认输出到 `Process_Data/mixed/`。
-默认 mixup 数据集使用顶层处理后目录，例如 `HITSM_self_built`、`HITSM_SpectraQuest`、`KAIST1`、`KAIST2`、`KAIST3`、`CWRU`、`TORINO`、`XJTUSY`。不要使用旧的嵌套路径如 `HITSM/HITSM_self_built`。
+`mixup.py` 基于 `Process_data/Pretrain` 中已有的 `train.parquet` 生成数据集两两组合文件，默认输出到 `Process_data/mixed/`。
+默认 mixup 数据集使用预训练处理后目录名，例如 `HITSM_self_built`、`HITSM_SpectraQuest`、`KAIST1`、`KAIST2`、`KAIST3`、`CWRU`、`TORINO`、`XJTUSY`。输出文件名不带 `Pretrain_` 前缀，不要使用旧的嵌套路径如 `HITSM/HITSM_self_built`。
 
 常用命令：
 
@@ -99,7 +115,7 @@ python main.py --help
 python mixup.py --dry-run
 ```
 
-验证单个数据集时优先输出到 `/tmp`，避免污染正式 `Process_Data`：
+验证单个数据集时优先输出到 `/tmp`，避免污染正式 `Process_data`：
 
 ```bash
 python main.py \
@@ -116,7 +132,7 @@ python main.py \
 ```bash
 python - <<'PY'
 import pyarrow.parquet as pq
-t = pq.read_table('/tmp/phmfd_test_output/UO/train.parquet')
+t = pq.read_table('/tmp/phmfd_test_output/Pretrain/UO/train.parquet')
 print(t.num_rows, t.column_names, len(t['samples'][0].as_py()))
 PY
 ```
@@ -128,4 +144,6 @@ PY
 - 不要把旧脚本里的绝对路径带入仓库。
 - 不要引入绘图后端依赖到预处理脚本中。
 - 修改默认路径时同步 `README.md`、`main.py` 和相关脚本说明。
+- 修改统一入口、数据集注册、默认路径、输出目录结构、Parquet 字段约定或 `mixup.py` 默认行为时，必须同步更新本文件。
+- 修改或新增数据集分类、Raw/Process 目录位置、mixup 输入输出目录时，必须同步更新本文件和 README。
 - 对已有用户改动保持谨慎，只改当前任务相关文件。

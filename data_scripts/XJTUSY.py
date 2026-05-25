@@ -20,8 +20,8 @@ DATASET_CONFIG = {
 class PrepareXJTUSY:
     def __init__(
         self,
-        data_dir=Path("Raw_data") / "XJTU-SY",
-        save_dir=Path("Process_Data") / "XJTUSY",
+        data_dir=Path("Raw_data") / "Pretrain" / "XJTU-SY",
+        save_dir=Path("Process_data") / "Pretrain" / "XJTUSY",
         time_interval=0.1,
         norm_method="none",
         sampling_frequency=25600,
@@ -240,8 +240,8 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     xjtusy_preproc = PrepareXJTUSY(
-        data_dir=Path("Raw_data") / "XJTU-SY",
-        save_dir=Path("Process_Data") / "XJTUSY",
+        data_dir=Path("Raw_data") / "Pretrain" / "XJTU-SY",
+        save_dir=Path("Process_data") / "Pretrain" / "XJTUSY",
         time_interval=0.1,
         norm_method="minmax",
         resampled_size=1024,

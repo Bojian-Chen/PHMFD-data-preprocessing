@@ -18,9 +18,10 @@ DEFAULT_DATASETS = (
     "TORINO",
     "XJTUSY",
     "MFPT",
-    "FEMTO"
+    "FEMTO",
 )
 DEFAULT_TRAIN_FILES = ("train.parquet",)
+DEFAULT_DATA_SUBDIRS = ("Pretrain",)
 
 
 def mixup_data(src_x, trg_x, mix_ratio, temporal_shift=50):
@@ -130,11 +131,13 @@ def write_mixed_pair(
 
 
 def resolve_train_file(data_root, dataset_name):
-    dataset_dir = data_root / dataset_name
-    for file_name in DEFAULT_TRAIN_FILES:
-        candidate = dataset_dir / file_name
-        if candidate.exists():
-            return candidate
+    candidate_dirs = [data_root / subdir / dataset_name for subdir in DEFAULT_DATA_SUBDIRS]
+    candidate_dirs.append(data_root / dataset_name)
+    for dataset_dir in candidate_dirs:
+        for file_name in DEFAULT_TRAIN_FILES:
+            candidate = dataset_dir / file_name
+            if candidate.exists():
+                return candidate
     return None
 
 
@@ -143,7 +146,12 @@ def dataset_id_from_train_file(train_file, data_root):
         relative_parent = train_file.parent.relative_to(data_root)
     except ValueError:
         return train_file.parent.name
-    return "_".join(relative_parent.parts)
+    parts = relative_parent.parts
+    if parts and parts[0] in {"Pretrain", "Finetune"}:
+        parts = parts[1:]
+    if not parts:
+        return train_file.parent.name
+    return "_".join(parts)
 
 
 def collect_train_files(data_root, dataset_names):
@@ -197,7 +205,7 @@ def build_parser():
     )
     parser.add_argument(
         "--data-root",
-        default="Process_Data",
+        default="Process_data",
         help="Root directory containing processed dataset folders.",
     )
     parser.add_argument(

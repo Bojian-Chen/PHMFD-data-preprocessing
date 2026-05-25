@@ -26,8 +26,8 @@ DATASET_CONFIG = {
 class KAISTProcessor:
     def __init__(
         self,
-        raw_dir=Path("Raw_data") / "KAIST",
-        save_path=Path("Process_Data") / "KAIST",
+        raw_dir=Path("Raw_data") / "Pretrain" / "KAIST",
+        save_path=Path("Process_data") / "Pretrain" / "KAIST",
         time_interval=0.1,
         norm="none",
         sampling_frequency=25600,
@@ -259,8 +259,8 @@ def find_kaist_parts(raw_root):
 
 
 def process_all_kaist_parts(
-    raw_root=Path("Raw_data") / "KAIST",
-    save_root=Path("Process_Data"),
+    raw_root=Path("Raw_data") / "Pretrain" / "KAIST",
+    save_root=Path("Process_data") / "Pretrain",
     time_interval=0.1,
     norm="none",
     sampling_frequency=25600,
@@ -292,8 +292,8 @@ def process_all_kaist_parts(
 
 if __name__ == "__main__":
     process_all_kaist_parts(
-        raw_root=Path("Raw_data") / "KAIST",
-        save_root=Path("Process_Data"),
+        raw_root=Path("Raw_data") / "Pretrain" / "KAIST",
+        save_root=Path("Process_data") / "Pretrain",
         time_interval=0.1,
         norm="none",
         sampling_frequency=25600,

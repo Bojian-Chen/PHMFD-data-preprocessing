@@ -7,10 +7,11 @@
 原始数据和已经处理好的 Parquet 数据托管在 Hugging Face：
 
 - 数据仓库：[bojian1/PHMFD-data](https://huggingface.co/datasets/bojian1/PHMFD-data/)
-- 处理后数据目录：`Process_Data/`
-- 重新预处理时的默认原始数据目录：`Raw_data/`
+- 原始数据目录：`Raw_data/Pretrain/`、`Raw_data/Finetune/`
+- 处理后数据目录：`Process_data/Pretrain/`、`Process_data/Finetune/`
+- mixup 数据目录：`Process_data/mixed/`
 
-如只需要使用处理好的数据，可以直接下载 Hugging Face 仓库中的 `Process_Data/`。如需重新运行本仓库的预处理脚本，请将原始数据保持在 `Raw_data/<dataset_name>/` 结构下。
+如只需要使用处理好的数据，可以直接下载 Hugging Face 仓库中的 `Process_data/`。如需重新运行本仓库的预处理脚本，请将当前使用的数据集按任务保持在 `Raw_data/Pretrain/<dataset_name>/` 或 `Raw_data/Finetune/<dataset_name>/` 结构下。
 
 ```bash
 pip install -U huggingface_hub
@@ -23,7 +24,7 @@ huggingface-cli download bojian1/PHMFD-data \
 # 只下载处理后的 Parquet 数据
 huggingface-cli download bojian1/PHMFD-data \
   --repo-type dataset \
-  --include "Process_Data/**" \
+  --include "Process_data/**" \
   --local-dir .
 ```
 
@@ -33,14 +34,19 @@ huggingface-cli download bojian1/PHMFD-data \
 .
 ├── main.py                 # 统一调度入口
 ├── data_scripts/           # 各数据集预处理脚本
-├── Raw_data/               # 默认原始数据根目录
-├── Process_Data/           # 默认处理后数据输出目录
+├── Raw_data/
+│   ├── Pretrain/           # 预训练原始数据
+│   └── Finetune/           # 微调原始数据
+├── Process_data/
+│   ├── Pretrain/           # 预训练处理后数据
+│   ├── Finetune/           # 微调处理后数据
+│   └── mixed/              # mixup 输出，保持在 Process_data 根下
 └── README.md
 ```
 
 ## 支持的数据集
 
-下表中的原始目录均相对于 `--raw-root`，默认 `--raw-root Raw_data`；输出目录均相对于 `--save-root`，默认 `--save-root Process_Data`。
+下表中的原始目录会按任务自动映射到 `--raw-root/Pretrain` 或 `--raw-root/Finetune`，默认 `--raw-root Raw_data`；输出目录会按任务自动映射到 `--save-root/Pretrain` 或 `--save-root/Finetune`，默认 `--save-root Process_data`。
 
 | 名称 | 原始目录候选 | 输出目录 | 任务类型 |
 | --- | --- | --- | --- |
@@ -49,6 +55,7 @@ huggingface-cli download bojian1/PHMFD-data \
 | `FEMTO` | `FEMTO` | `FEMTO` | pretrain |
 | `HITSM` | `HIT-SM`, `HITSM` | `HITSM_self_built`, `HITSM_SpectraQuest` | pretrain |
 | `IMS_FD` | `IMS`, `IMS_FD` | `IMS_FD` | finetune |
+| `JNU` | `JNU` | `JNU` | finetune |
 | `KAIST` | `KAIST` | `KAIST1`, `KAIST2`, ... | pretrain |
 | `MFPT` | `MFPT` | `MFPT` | pretrain |
 | `PU` | `PU`, `RM_027_PU` | `PU` | finetune |
@@ -56,7 +63,26 @@ huggingface-cli download bojian1/PHMFD-data \
 | `UO` | `UO` | `UO` | pretrain |
 | `XJTUSY` | `XJTU-SY`, `XJTUSY` | `XJTUSY` | pretrain |
 
-`main.py` 会在候选原始目录中优先使用实际存在的目录。`KAIST` 会根据原始数据中的完整 CSV 子集自动生成 `KAIST1`、`KAIST2` 等输出目录。
+`main.py` 会优先在分类后的任务目录中查找候选原始目录，并兼容未分类的旧目录结构。`KAIST` 会根据原始数据中的完整 CSV 子集生成 `KAIST1`、`KAIST2`、`KAIST3` 输出目录。
+
+## 数据集元信息
+
+下表中的采样频率、通道数和使用通道以当前 `data_scripts/` 预处理代码为准；来源 link 和 bib 信息未确认时留空，后续可继续补充。
+
+| 数据集 | 数据集类型 | 采样频率 | 原始通道数 | 使用的通道 | 来源 link | 引用文献 bib |
+| --- | --- | --- | --- | --- | --- | --- |
+| `CNC` | 工业/CNC 加工 | 2 kHz | 3 | `vibration_data` 全部 3 通道 |  |  |
+| `CWRU` | 轴承 | 12 kHz | 2 | `DE_time`, `FE_time` | [CWRU Bearing Data Center](https://engineering.case.edu/content/bearing-data-center) |  |
+| `FEMTO` | 轴承 | 25.6 kHz | 6 | CSV 第 5、6 列加速度通道 | [NASA PCoE Data Repository](https://www.nasa.gov/content/prognostics-center-of-excellence-data-set-repository) |  |
+| `HITSM` | 轴承 | 51.2 kHz | 1 | `.mat` 信号通道 |  |  |
+| `IMS_FD` | 轴承 | 20.48 kHz | 1st test: 8；2nd test: 4 | `bearing1_1`, `bearing1_3`, `bearing1_4`, `bearing2_1` 对应列 | [NASA IMS Bearings](https://data.nasa.gov/dataset/ims-bearings) | `Qiu2006` |
+| `JNU` | 轴承 | 50 kHz | 1 | 垂直方向振动信号 | [JNU-Bearing-Dataset](https://github.com/ClarkGableWang/JNU-Bearing-Dataset) |  |
+| `KAIST` | 轴承 | 25.6 kHz | 4 | `bearingA_x`, `bearingA_y`, `bearingB_x`, `bearingB_y` |  |  |
+| `MFPT` | 轴承 | 97656/48828 | 1 | `bearing` 结构中的振动信号 | [MFPT Fault Data Sets](https://www.mfpt.org/fault-data-sets/) |  |
+| `PU` | 轴承 | 64 kHz | 1 | `Y` 结构中的振动信号 | [Paderborn Bearing DataCenter](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter) | `Lessmeier2016` |
+| `TORINO` | 轴承 | 51.2 kHz | 6 | `.mat` 中全部 6 个通道 |  |  |
+| `UO` | 轴承 | 200 kHz | 2 | `Channel_1` |  |  |
+| `XJTUSY` | 轴承 | 25.6 kHz | 2 | `Horizontal_vibration_signals`, `Vertical_vibration_signals` | [XJTU-SY Bearing Datasets](http://biaowang.tech/xjtu-sy-bearing-datasets/) |  |
 
 ## 环境依赖
 
@@ -99,7 +125,7 @@ python main.py --datasets CWRU PU IMS_FD
 python main.py \
   --datasets PU \
   --raw-root Raw_data \
-  --save-root Process_Data
+  --save-root Process_data
 ```
 
 设置窗口长度、归一化方式和重采样长度：
@@ -130,7 +156,7 @@ python main.py --datasets all --continue-on-error
 | --- | --- | --- |
 | `--datasets` | `all` | 要处理的数据集，支持 `all` 或多个数据集名 |
 | `--raw-root` | `Raw_data` | 原始数据根目录 |
-| `--save-root` | `Process_Data` | 处理后数据输出根目录 |
+| `--save-root` | `Process_data` | 处理后数据输出根目录 |
 | `--sample-time` | `0.1` | 每个样本窗口长度，单位秒 |
 | `--norm-method` | `minmax` | 归一化方式，可选 `none`、`minmax`、`zscore` |
 | `--resampled-size` | `1024` | 重采样后的长度；传入 `none` 可禁用 |
@@ -148,7 +174,7 @@ python main.py --datasets all --continue-on-error
 预训练数据集通常输出：
 
 ```text
-Process_Data/<dataset>/
+Process_data/Pretrain/<dataset>/
 ├── train.parquet
 ├── val.parquet
 └── test.parquet
@@ -157,7 +183,7 @@ Process_Data/<dataset>/
 微调数据集通常输出小样本训练划分：
 
 ```text
-Process_Data/<dataset>/
+Process_data/Finetune/<dataset>/
 ├── train_1p.parquet
 ├── val.parquet
 └── test.parquet
@@ -173,7 +199,7 @@ Parquet 文件通常包含以下字段：
 
 ## Mixup 数据增强
 
-`mixup.py` 可基于 `Process_Data` 中已有的预训练数据集生成两两组合的 mixup Parquet 文件，默认输出到 `Process_Data/mixed/`。
+`mixup.py` 可基于 `Process_data/Pretrain` 中已有的预训练数据集生成两两组合的 mixup Parquet 文件，默认输出仍保留在 `Process_data/mixed/`。
 运行 `python mixup.py` 即可使用默认数据集组合，也可通过 `--datasets CWRU TORINO --max-samples 100` 指定数据集和样本数量；加上 `--skip-existing` 可跳过输出目录中已经存在的组合文件。
 
 ## 新增数据集

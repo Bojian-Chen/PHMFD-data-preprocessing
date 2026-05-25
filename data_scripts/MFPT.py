@@ -21,8 +21,8 @@ DATASET_CONFIG = {
 class MFPTDatasetPreprocessor:
     def __init__(
         self,
-        data_root=Path("Raw_data") / "MFPT",
-        save_root=Path("Process_Data") / "MFPT",
+        data_root=Path("Raw_data") / "Pretrain" / "MFPT",
+        save_root=Path("Process_data") / "Pretrain" / "MFPT",
         time_interval=0.1,
         norm="none",
         resampled_size=1024,
@@ -265,8 +265,8 @@ def load_parquet_data(path):
 
 if __name__ == "__main__":
     processor = MFPTDatasetPreprocessor(
-        data_root=Path("Raw_data") / "MFPT",
-        save_root=Path("Process_Data") / "MFPT",
+        data_root=Path("Raw_data") / "Pretrain" / "MFPT",
+        save_root=Path("Process_data") / "Pretrain" / "MFPT",
         time_interval=0.1,
         norm="minmax",
         resampled_size=1024,
