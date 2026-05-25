@@ -1,10 +1,10 @@
 # AGENT.md
 
-本文件给后续维护本仓库的 coding agent 使用。目标是保持 PHMFD 数据预处理代码风格一致，避免绕过统一入口或重复引入旧脚本习惯。
+本文件给后续维护本仓库的 coding agent 使用。当前分支 `paper/unifault` 专门用于 UniFault 论文实验，目标是保持数据预处理代码风格一致，避免绕过统一入口或重复引入旧脚本习惯。
 
 ## 项目定位
 
-PHMFD 指 PHM 基础模型。本仓库将多个机械故障诊断原始数据集统一预处理为 Parquet 文件，供预训练、微调和 mixup 数据增强使用。
+本分支将 UniFault 论文实验涉及的多个机械故障诊断原始数据集统一预处理为 Parquet 文件，供预训练、微调和 mixup 数据增强使用。
 
 核心入口是 `main.py`，数据集实现放在 `data_scripts/`。不要为单个数据集新增独立调度入口，除非只是保留脚本自身的 `if __name__ == "__main__"` 调试用法。
 
@@ -15,6 +15,7 @@ PHMFD 指 PHM 基础模型。本仓库将多个机械故障诊断原始数据集
 - 当前使用的数据集按任务分类：`Raw_data/Pretrain`、`Raw_data/Finetune`、`Process_data/Pretrain`、`Process_data/Finetune`
 - `mixup.py` 输出保持在 `Process_data/mixed`
 - 原始数据和处理后数据仓库：`https://huggingface.co/datasets/bojian1/PHMFD-data/`
+- UniFault 已制作数据托管目录：`https://huggingface.co/datasets/bojian1/PHMFD-data/tree/main/Process_data_UniFault`
 - 本地大数据目录通常不应提交：`Raw_data/`、`Process_data/`
 
 如果 README 和代码默认值不一致，优先以 `main.py` 为准，并同步修 README。
@@ -36,7 +37,7 @@ DATASET_CONFIG = {
 `save_folder` 的含义：
 
 - `main.py` 会根据 `task` 自动在 `Raw_data` 和 `Process_data` 下增加 `Pretrain` 或 `Finetune` 分类目录。
-- 普通单输出数据集使用目录名，例如 `"CWRU"` 会输出到 `Process_data/Pretrain/CWRU`，`"JNU"` 会输出到 `Process_data/Finetune/JNU`。
+- 普通单输出数据集使用目录名，例如 `"CWRU"` 会输出到 `Process_data/Pretrain/CWRU`，`"PU"` 会输出到 `Process_data/Finetune/PU`。
 - 一个脚本拆成多个顶层数据集时使用空字符串 `""`，由脚本自己写入 `Process_data/<Task>/<dataset>`。
 - 当前多输出脚本包括 `CNC`、`HITSM`、`KAIST`。
 
@@ -53,7 +54,6 @@ DATASET_CONFIG = {
 
 - `CNC` 输出为 `Process_data/Finetune/M01`、`Process_data/Finetune/M02`、`Process_data/Finetune/M03`，不要加 `CNC_` 前缀，也不要再嵌套到 `Process_data/Finetune/CNC/`。
 - `HITSM` 输出为 `Process_data/Pretrain/HITSM_self_built` 和 `Process_data/Pretrain/HITSM_SpectraQuest`，不要再嵌套到 `Process_data/Pretrain/HITSM/`。
-- `JNU` 是 finetune 数据集，文件名前缀映射为 `n -> 0`、`ib -> 1`、`ob -> 2`、`tb -> 3`，工况按文件名中的 `600/800/1000` 分组。
 - `KAIST` 输出为 `Process_data/Pretrain/KAIST1`、`Process_data/Pretrain/KAIST2`、`Process_data/Pretrain/KAIST3`；当前显式映射为 `part1 -> (0,1,2)`、`part2 -> (3,4)`、`part3 -> (5,6)`。
 
 ## main.py 参数映射

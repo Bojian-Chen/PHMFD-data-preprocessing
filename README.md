@@ -1,17 +1,18 @@
-# PHMFD 数据预处理
+# UniFault 数据预处理
 
-本仓库用于将 PHM 基础模型训练和微调涉及的多个机械故障诊断数据集统一预处理为 Parquet 格式。统一入口为 `main.py`，每个数据集的读取、切分、归一化、重采样和保存逻辑放在 `data_scripts/` 下。
+本分支专门用于 UniFault 论文实验的数据预处理，将论文涉及的多个机械故障诊断数据集统一转换为 Parquet 格式。统一入口为 `main.py`，每个数据集的读取、切分、归一化、重采样和保存逻辑放在 `data_scripts/` 下。
 
 ## 数据仓库
 
 原始数据和已经处理好的 Parquet 数据托管在 Hugging Face：
 
 - 数据仓库：[bojian1/PHMFD-data](https://huggingface.co/datasets/bojian1/PHMFD-data/)
+- UniFault 处理后数据目录：[Process_data_UniFault](https://huggingface.co/datasets/bojian1/PHMFD-data/tree/main/Process_data_UniFault)
 - 原始数据目录：`Raw_data/Pretrain/`、`Raw_data/Finetune/`
-- 处理后数据目录：`Process_data/Pretrain/`、`Process_data/Finetune/`
+- 本地脚本默认处理后数据目录：`Process_data/Pretrain/`、`Process_data/Finetune/`
 - mixup 数据目录：`Process_data/mixed/`
 
-如只需要使用处理好的数据，可以直接下载 Hugging Face 仓库中的 `Process_data/`。如需重新运行本仓库的预处理脚本，请将当前使用的数据集按任务保持在 `Raw_data/Pretrain/<dataset_name>/` 或 `Raw_data/Finetune/<dataset_name>/` 结构下。
+如只需要使用 UniFault 已经制作好的数据，可以直接下载 Hugging Face 仓库中的 `Process_data_UniFault/`。如需重新运行本仓库的预处理脚本，请将当前使用的数据集按任务保持在 `Raw_data/Pretrain/<dataset_name>/` 或 `Raw_data/Finetune/<dataset_name>/` 结构下；脚本默认会重新生成到本地 `Process_data/`。
 
 ```bash
 pip install -U huggingface_hub
@@ -21,10 +22,10 @@ huggingface-cli download bojian1/PHMFD-data \
   --repo-type dataset \
   --local-dir .
 
-# 只下载处理后的 Parquet 数据
+# 只下载 UniFault 处理后的 Parquet 数据
 huggingface-cli download bojian1/PHMFD-data \
   --repo-type dataset \
-  --include "Process_data/**" \
+  --include "Process_data_UniFault/**" \
   --local-dir .
 ```
 
@@ -55,7 +56,6 @@ huggingface-cli download bojian1/PHMFD-data \
 | `FEMTO` | `FEMTO` | `FEMTO` | pretrain |
 | `HITSM` | `HIT-SM`, `HITSM` | `HITSM_self_built`, `HITSM_SpectraQuest` | pretrain |
 | `IMS_FD` | `IMS`, `IMS_FD` | `IMS_FD` | finetune |
-| `JNU` | `JNU` | `JNU` | finetune |
 | `KAIST` | `KAIST` | `KAIST1`, `KAIST2`, ... | pretrain |
 | `MFPT` | `MFPT` | `MFPT` | pretrain |
 | `PU` | `PU`, `RM_027_PU` | `PU` | finetune |
@@ -76,7 +76,6 @@ huggingface-cli download bojian1/PHMFD-data \
 | `FEMTO` | 轴承 | 25.6 kHz | 6 | CSV 第 5、6 列加速度通道 | [Github](https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset) | [Ref](https://hal.science/hal-00719503/) |
 | `HITSM` | 轴承 | 51.2 kHz | 1 | `.mat` 信号通道 |  |  |
 | `IMS_FD` | 轴承 | 20.48 kHz | 1st test: 8；2nd test: 4 | `bearing1_1`, `bearing1_3`, `bearing1_4`, `bearing2_1` 对应列 | [NASA IMS Bearings](https://data.nasa.gov/dataset/ims-bearings) | `Qiu2006` |
-| `JNU` | 轴承 | 50 kHz | 1 | 垂直方向振动信号 | [JNU-Bearing-Dataset](https://github.com/ClarkGableWang/JNU-Bearing-Dataset) |  |
 | `KAIST` | 轴承 | 25.6 kHz | 4 | `bearingA_x`, `bearingA_y`, `bearingB_x`, `bearingB_y` |[Part1](https://data.mendeley.com/datasets/vxkj334rzv/7) [Part2](https://data.mendeley.com/datasets/x3vhp8t6hg/7) [Part3](https://data.mendeley.com/datasets/j8d8pfkvj2/4) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340923001671) |
 | `MFPT` | 轴承 | 97656/48828 | 1 | `bearing` 结构中的振动信号 | [MFPT Fault Data Sets](https://www.mfpt.org/fault-data-sets/) |  |
 | `PU` | 轴承 | 64 kHz | 1 | `Y` 结构中的振动信号 | [Paderborn Bearing DataCenter](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter) | `Lessmeier2016` |

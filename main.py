@@ -192,13 +192,13 @@ def build_parser():
     parser.add_argument("--sample-time", type=float, help="Window length in seconds.")
     parser.add_argument(
         "--norm-method",
-        default="zscore",
+        default="minmax",
         help="Normalization method: none, minmax, zscore.",
     )
     parser.add_argument(
         "--resampled-size",
         type=parse_optional_int,
-        default="none",
+        default=1024,
         help="Target sample length. Use 'none' to disable resampling.",
     )
     parser.add_argument("--train-size", type=float, default=0.6)
