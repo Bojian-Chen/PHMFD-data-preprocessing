@@ -55,17 +55,23 @@ class ExamplePretrainProcessor:
             self.seed,
         )
 
+        split_shapes = {}
         for split_name, indices in split_indices.items():
             split_samples = samples[indices]
             split_samples = normalize_per_sample(split_samples, self.norm_method)
             split_samples = maybe_resample(split_samples, self.resampled_size)
+            split_shapes[split_name] = tuple(split_samples.shape)
             save_pretrain_parquet(
                 split_samples,
                 split_name,
                 self.save_dir / f"{split_name}.parquet",
             )
 
-        print(f"ExamplePretrain saved to {self.save_dir}")
+        shapes = ", ".join(
+            f"{split_name}={shape}"
+            for split_name, shape in split_shapes.items()
+        )
+        print(f"ExamplePretrain saved pretrain splits {shapes} to {self.save_dir}")
 
     def load_samples(self):
         if not self.raw_dir.exists():

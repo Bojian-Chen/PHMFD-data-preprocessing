@@ -8,6 +8,11 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from scipy.signal import resample as scipy_resample
 
+from data_scripts.fewshot import (
+    sample_balanced_fraction_indices,
+    sample_balanced_shot_indices,
+)
+
 
 DATASET_CONFIG = {
     "target": "IMS_FD",
@@ -31,6 +36,8 @@ class IMS_FD:
         val_size=0.2,
         test_size=0.2,
         seed=42,
+        fewshot_seed=42,
+        fewshot_shots=None,
     ):
         self.dataset_name = DATASET_CONFIG["save_folder"]
         self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
@@ -44,8 +51,14 @@ class IMS_FD:
         self.val_size = float(val_size)
         self.test_size = float(test_size)
         self.seed = seed
+        self.fewshot_seed = fewshot_seed
+        self.fewshot_shots = (
+            int(fewshot_shots) if fewshot_shots is not None else None
+        )
         if abs((self.train_size + self.val_size + self.test_size) - 1.0) > 1e-6:
             raise ValueError("train_size + val_size + test_size must equal 1.0.")
+        if self.fewshot_shots is not None and self.fewshot_shots <= 0:
+            raise ValueError("fewshot_shots must be positive.")
 
         self.normal_range = ("2003.10.22.12.06.24", "2003.10.22.12.29.13")
         self.ir_range = ("2003.11.25.15.57.32", "2003.11.25.23.39.56")
@@ -54,6 +67,28 @@ class IMS_FD:
 
     def prepare_dataset(self):
         samples, labels, groups = self.load_samples()
+        if self.fewshot_shots is not None:
+            split_name = f"train_{self.fewshot_shots}shot"
+            indices = sample_balanced_shot_indices(
+                labels,
+                groups,
+                self.fewshot_shots,
+                self.fewshot_seed,
+            )
+            split_samples = samples[indices]
+            split_labels = labels[indices]
+            split_samples = normalize_per_sample(split_samples, self.norm_method)
+            split_samples = maybe_resample(split_samples, self.resampled_size)
+            split_shape = tuple(split_samples.shape)
+            save_parquet(
+                split_samples,
+                split_labels,
+                self.dataset_name,
+                self.save_dir / f"{split_name}.parquet",
+            )
+            print(f"{self.dataset_name}: saved {split_name}={split_shape} to {self.save_dir}")
+            return
+
         split_indices = split_finetune_indices(
             groups,
             seed=self.seed,
@@ -62,11 +97,13 @@ class IMS_FD:
             test_ratio=self.test_size,
         )
 
+        split_shapes = {}
         for split_name, indices in split_indices.items():
             split_samples = samples[indices]
             split_labels = labels[indices]
             split_samples = normalize_per_sample(split_samples, self.norm_method)
             split_samples = maybe_resample(split_samples, self.resampled_size)
+            split_shapes[split_name] = tuple(split_samples.shape)
             save_parquet(
                 split_samples,
                 split_labels,
@@ -74,11 +111,11 @@ class IMS_FD:
                 self.save_dir / f"{split_name}.parquet",
             )
 
-        counts = ", ".join(
-            f"{split_name}={len(indices)}"
-            for split_name, indices in split_indices.items()
+        shapes = ", ".join(
+            f"{split_name}={shape}"
+            for split_name, shape in split_shapes.items()
         )
-        print(f"{self.dataset_name}: saved finetune splits {counts} to {self.save_dir}")
+        print(f"{self.dataset_name}: saved finetune splits {shapes} to {self.save_dir}")
 
     def load_samples(self):
         all_samples = []
@@ -210,19 +247,7 @@ def split_finetune_indices(
 
 
 def sample_fewshot_train(train_indices, groups, fraction, seed):
-    rng = np.random.default_rng(seed)
-    by_group = defaultdict(list)
-    for idx in train_indices:
-        by_group[groups[int(idx)]].append(int(idx))
-
-    sampled = []
-    for group in sorted(by_group):
-        indices = np.asarray(by_group[group], dtype=np.int64)
-        group_target = max(1, int(np.floor(len(indices) * fraction)))
-        group_target = min(group_target, len(indices))
-        chosen_idx = rng.choice(len(indices), size=group_target, replace=False)
-        sampled.extend(indices[chosen_idx].tolist())
-    return sorted(sampled)
+    return sample_balanced_fraction_indices(train_indices, groups, fraction, seed)
 
 
 def normalize_per_sample(samples, norm_method):

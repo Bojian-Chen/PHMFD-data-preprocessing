@@ -1,6 +1,5 @@
 from collections import defaultdict
 from pathlib import Path
-import re
 
 import numpy as np
 import pandas as pd
@@ -15,21 +14,45 @@ from data_scripts.fewshot import (
 
 
 DATASET_CONFIG = {
-    "target": "JNUFinetuneProcessor",
+    "target": "SEUFinetuneProcessor",
     "method": "prepare_dataset",
     "task": "finetune",
-    "raw_folders": ("JNU",),
-    "save_folder": "JNU",
+    "raw_folders": ("SEU",),
+    "save_folder": "",
 }
 
 
-class JNUFinetuneProcessor:
+SUBSETS = {
+    "SEU_Bearing": {
+        "folder": "bearingset",
+        "labels": {
+            "health": 0,
+            "ball": 1,
+            "inner": 2,
+            "outer": 3,
+            "comb": 4,
+        },
+    },
+    "SEU_Gear": {
+        "folder": "gearset",
+        "labels": {
+            "health": 0,
+            "chipped": 1,
+            "miss": 2,
+            "root": 3,
+            "surface": 4,
+        },
+    },
+}
+
+
+class SEUFinetuneProcessor:
     def __init__(
         self,
         raw_dir=None,
         save_dir=None,
         sample_time=0.1,
-        sampling_frequency=50000,
+        sampling_frequency=5120,
         norm_method="none",
         resampled_size=None,
         train_size=0.6,
@@ -39,7 +62,6 @@ class JNUFinetuneProcessor:
         fewshot_seed=42,
         fewshot_shots=None,
     ):
-        self.dataset_name = DATASET_CONFIG["save_folder"]
         self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
         self.save_dir = Path(save_dir) if save_dir is not None else default_save_dir()
         self.sample_time = float(sample_time)
@@ -57,12 +79,6 @@ class JNUFinetuneProcessor:
         self.fewshot_shots = (
             int(fewshot_shots) if fewshot_shots is not None else None
         )
-        self.label_map = {
-            "n": 0,
-            "ib": 1,
-            "ob": 2,
-            "tb": 3,
-        }
 
         if self.window_size <= 0:
             raise ValueError("window_size must be positive.")
@@ -74,7 +90,16 @@ class JNUFinetuneProcessor:
             raise ValueError("fewshot_shots must be positive.")
 
     def prepare_dataset(self):
-        samples, labels, groups = self.load_samples()
+        data_root = resolve_data_root(self.raw_dir)
+        for dataset_name, subset_config in SUBSETS.items():
+            samples, labels, groups = self.load_subset_samples(
+                data_root,
+                dataset_name,
+                subset_config,
+            )
+            self.save_subset(dataset_name, samples, labels, groups)
+
+    def save_subset(self, dataset_name, samples, labels, groups):
         if self.fewshot_shots is not None:
             split_name = f"train_{self.fewshot_shots}shot"
             indices = sample_balanced_shot_indices(
@@ -91,10 +116,13 @@ class JNUFinetuneProcessor:
             save_parquet(
                 split_samples,
                 split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
+                dataset_name,
+                self.save_dir / dataset_name / f"{split_name}.parquet",
             )
-            print(f"{self.dataset_name}: saved {split_name}={split_shape} to {self.save_dir}")
+            print(
+                f"{dataset_name}: saved {split_name}={split_shape} "
+                f"to {self.save_dir / dataset_name}"
+            )
             return
 
         split_indices = split_finetune_indices(
@@ -115,35 +143,39 @@ class JNUFinetuneProcessor:
             save_parquet(
                 split_samples,
                 split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
+                dataset_name,
+                self.save_dir / dataset_name / f"{split_name}.parquet",
             )
 
         shapes = ", ".join(
             f"{split_name}={shape}"
             for split_name, shape in split_shapes.items()
         )
-        print(f"{self.dataset_name}: saved finetune splits {shapes} to {self.save_dir}")
+        print(
+            f"{dataset_name}: saved finetune splits {shapes} "
+            f"to {self.save_dir / dataset_name}"
+        )
 
-    def load_samples(self):
-        if not self.raw_dir.exists():
-            raise FileNotFoundError(f"JNU data directory does not exist: {self.raw_dir}")
-
+    def load_subset_samples(self, data_root, dataset_name, subset_config):
         samples = []
         labels = []
         groups = []
-        for csv_path in sorted(self.raw_dir.glob("*.csv")):
-            label, speed = parse_jnu_filename(csv_path.stem)
-            signal = read_jnu_signal(csv_path)
+        subset_dir = data_root / subset_config["folder"]
+        label_map = subset_config["labels"]
+
+        for csv_path in sorted(subset_dir.glob("*.csv")):
+            label_name, condition = parse_file_stem(csv_path.stem)
+            label = label_map[label_name]
+            signal = read_seu_signal(csv_path)
             windows = segment_signal(signal, self.window_size)
             if len(windows) == 0:
                 continue
             samples.append(windows)
             labels.append(np.full(len(windows), label, dtype=np.int64))
-            groups.extend([(label, speed)] * len(windows))
+            groups.extend([(dataset_name, label_name, condition)] * len(windows))
 
         if not samples:
-            raise RuntimeError(f"No JNU samples were found under {self.raw_dir}")
+            raise RuntimeError(f"No {dataset_name} samples were found under {subset_dir}")
 
         return (
             np.concatenate(samples, axis=0).astype(np.float32),
@@ -152,24 +184,42 @@ class JNUFinetuneProcessor:
         )
 
 
-def parse_jnu_filename(file_stem):
-    lower_name = file_stem.lower()
-    for prefix in ("ib", "ob", "tb", "n"):
-        if lower_name.startswith(prefix):
-            label = {"n": 0, "ib": 1, "ob": 2, "tb": 3}[prefix]
-            break
-    else:
-        raise ValueError(f"Cannot infer JNU label from file name: {file_stem}")
-
-    match = re.search(r"(600|800|1000)", lower_name)
-    if not match:
-        raise ValueError(f"Cannot infer JNU speed from file name: {file_stem}")
-    return label, int(match.group(1))
+def resolve_data_root(raw_dir):
+    raw_dir = Path(raw_dir)
+    candidates = (raw_dir, raw_dir / "gearbox")
+    for candidate in candidates:
+        if (candidate / "bearingset").exists() and (candidate / "gearset").exists():
+            return candidate
+    raise FileNotFoundError(f"Cannot find SEU gearbox data under {raw_dir}")
 
 
-def read_jnu_signal(path):
-    values = pd.read_csv(path, header=None).iloc[:, 0].to_numpy(dtype=np.float32)
-    return values.reshape(1, -1)
+def parse_file_stem(file_stem):
+    parts = file_stem.lower().split("_")
+    if len(parts) < 3:
+        raise ValueError(f"Cannot infer SEU label and condition from {file_stem}")
+    label_name = "_".join(parts[:-2])
+    condition = "_".join(parts[-2:])
+    return label_name, condition
+
+
+def read_seu_signal(path):
+    delimiter = detect_delimiter(path)
+    df = pd.read_csv(
+        path,
+        header=None,
+        skiprows=16,
+        sep=delimiter,
+        usecols=(1, 2, 3),
+        dtype=np.float32,
+        engine="c",
+    )
+    return df.to_numpy(dtype=np.float32).T
+
+
+def detect_delimiter(path):
+    with Path(path).open("r", encoding="utf-8", errors="ignore") as file:
+        first_line = file.readline()
+    return "\t" if "\t" in first_line else ","
 
 
 def segment_signal(signal, window_size):
@@ -271,15 +321,18 @@ def save_parquet(samples, labels, dataset_name, save_path):
 
 
 def default_raw_dir():
-    return Path("Raw_data") / "Finetune" / DATASET_CONFIG["raw_folders"][0]
+    finetune_path = Path("Raw_data") / "Finetune" / DATASET_CONFIG["raw_folders"][0]
+    if finetune_path.exists():
+        return finetune_path
+    return Path("Raw_data") / DATASET_CONFIG["raw_folders"][0]
 
 
 def default_save_dir():
-    return Path("Process_data") / "Finetune" / DATASET_CONFIG["save_folder"]
+    return Path("Process_data") / "Finetune"
 
 
 if __name__ == "__main__":
-    processor = JNUFinetuneProcessor(
+    processor = SEUFinetuneProcessor(
         norm_method="minmax",
         resampled_size=1024,
     )

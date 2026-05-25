@@ -26,6 +26,7 @@ COMMON_PARAM_ALIASES = {
     "test_size": ("test_size",),
     "seed": ("seed",),
     "fewshot_seed": ("fewshot_seed",),
+    "fewshot_shots": ("fewshot_shots",),
 }
 
 
@@ -111,6 +112,7 @@ def unified_values(args, config):
             args.fewshot_seed,
             DEFAULT_FEWSHOT_SEED,
         )
+        values["fewshot_shots"] = args.fewshot_shots
     return values
 
 
@@ -210,6 +212,15 @@ def build_parser():
         type=int,
         default=42,
         help="Seed for finetune few-shot sampling when the dataset supports it.",
+    )
+    parser.add_argument(
+        "--fewshot-shots",
+        type=int,
+        default=None,
+        help=(
+            "If set for finetune datasets, only generate train_<N>shot.parquet "
+            "with up to N samples per class, balanced across condition groups."
+        ),
     )
     parser.add_argument(
         "--continue-on-error",

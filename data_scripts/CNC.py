@@ -2,12 +2,16 @@ from collections import defaultdict
 from pathlib import Path
 
 import h5py
-import math
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 from scipy.signal import resample as scipy_resample
+
+from data_scripts.fewshot import (
+    sample_balanced_fraction_indices,
+    sample_balanced_shot_indices,
+)
 
 
 DATASET_CONFIG = {
@@ -33,6 +37,7 @@ class PrepareCNC:
         test_size=0.2,
         seed=42,
         fewshot_seed=20260504,
+        fewshot_shots=None,
     ):
         self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
         self.save_dir = Path(save_dir) if save_dir is not None else default_save_dir()
@@ -46,10 +51,15 @@ class PrepareCNC:
         self.test_size = float(test_size)
         self.seed = seed
         self.fewshot_seed = fewshot_seed
+        self.fewshot_shots = (
+            int(fewshot_shots) if fewshot_shots is not None else None
+        )
         self.machines = ("M01", "M02", "M03")
         self.label_map = {"good": 0, "bad": 1}
         if abs((self.train_size + self.val_size + self.test_size) - 1.0) > 1e-6:
             raise ValueError("train_size + val_size + test_size must equal 1.0.")
+        if self.fewshot_shots is not None and self.fewshot_shots <= 0:
+            raise ValueError("fewshot_shots must be positive.")
 
     def prepare_dataset(self):
         for machine in self.machines:
@@ -57,6 +67,34 @@ class PrepareCNC:
 
     def prepare_one_machine(self, machine):
         samples, labels, groups = self.load_samples(machine)
+        dataset_name = machine
+        machine_save_dir = self.save_dir / dataset_name
+
+        if self.fewshot_shots is not None:
+            split_name = f"train_{self.fewshot_shots}shot"
+            indices = sample_balanced_shot_indices(
+                labels,
+                groups,
+                self.fewshot_shots,
+                self.fewshot_seed,
+            )
+            split_samples = samples[indices]
+            split_labels = labels[indices]
+            split_samples = normalize_per_sample(split_samples, self.norm_method)
+            split_samples = maybe_resample(split_samples, self.resampled_size)
+            split_shape = tuple(split_samples.shape)
+            save_parquet(
+                split_samples,
+                split_labels,
+                dataset_name,
+                machine_save_dir / f"{split_name}.parquet",
+            )
+            print(
+                f"{dataset_name}: saved {split_name}={split_shape} "
+                f"to {machine_save_dir}"
+            )
+            return
+
         split_indices = split_finetune_indices(
             groups,
             seed=self.seed,
@@ -65,14 +103,14 @@ class PrepareCNC:
             val_ratio=self.val_size,
             test_ratio=self.test_size,
         )
-        dataset_name = machine
-        machine_save_dir = self.save_dir / dataset_name
 
+        split_shapes = {}
         for split_name, indices in split_indices.items():
             split_samples = samples[indices]
             split_labels = labels[indices]
             split_samples = normalize_per_sample(split_samples, self.norm_method)
             split_samples = maybe_resample(split_samples, self.resampled_size)
+            split_shapes[split_name] = tuple(split_samples.shape)
             save_parquet(
                 split_samples,
                 split_labels,
@@ -80,11 +118,11 @@ class PrepareCNC:
                 machine_save_dir / f"{split_name}.parquet",
             )
 
-        counts = ", ".join(
-            f"{split_name}={len(indices)}"
-            for split_name, indices in split_indices.items()
+        shapes = ", ".join(
+            f"{split_name}={shape}"
+            for split_name, shape in split_shapes.items()
         )
-        print(f"{dataset_name}: saved finetune splits {counts} to {machine_save_dir}")
+        print(f"{dataset_name}: saved finetune splits {shapes} to {machine_save_dir}")
 
     def prepare_CNC_dataset(self):
         self.prepare_dataset()
@@ -199,65 +237,7 @@ def split_finetune_indices(
 
 
 def sample_fewshot_train(train_indices, groups, fraction, seed):
-    rng = np.random.default_rng(seed)
-    by_condition = defaultdict(list)
-    for idx in train_indices:
-        _, condition = groups[int(idx)]
-        by_condition[condition].append(int(idx))
-
-    target_total = int(math.floor(len(train_indices) * fraction))
-    target_total = max(target_total, len(by_condition))
-    target_total = min(target_total, len(train_indices))
-    target_by_condition = proportional_counts(
-        {condition: len(indices) for condition, indices in by_condition.items()},
-        target_total,
-    )
-
-    sampled = []
-    for condition in sorted(by_condition):
-        indices = np.asarray(by_condition[condition], dtype=np.int64)
-        chosen_idx = rng.choice(
-            len(indices), size=target_by_condition[condition], replace=False
-        )
-        sampled.extend(indices[chosen_idx].tolist())
-    return sorted(sampled)
-
-
-def proportional_counts(group_sizes, target_total):
-    groups = sorted(group_sizes)
-    if target_total < len(groups):
-        raise ValueError(
-            f"target_total={target_total} is smaller than non-empty groups={len(groups)}"
-        )
-
-    counts = {group: 1 for group in groups}
-    remaining = target_total - len(groups)
-    if remaining == 0:
-        return counts
-
-    total_after_min = sum(group_sizes[group] - 1 for group in groups)
-    if total_after_min <= 0:
-        return counts
-
-    raw = {
-        group: remaining * (group_sizes[group] - 1) / total_after_min
-        for group in groups
-    }
-    for group in groups:
-        counts[group] += int(math.floor(raw[group]))
-
-    leftover = target_total - sum(counts.values())
-    remainders = sorted(
-        groups,
-        key=lambda group: (raw[group] - math.floor(raw[group]), group),
-        reverse=True,
-    )
-    for group in remainders[:leftover]:
-        counts[group] += 1
-
-    for group in groups:
-        counts[group] = min(counts[group], group_sizes[group])
-    return counts
+    return sample_balanced_fraction_indices(train_indices, groups, fraction, seed)
 
 
 def normalize_per_sample(samples, norm_method):

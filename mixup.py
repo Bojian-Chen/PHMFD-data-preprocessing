@@ -127,7 +127,8 @@ def write_mixed_pair(
         if writer is not None:
             writer.close()
 
-    print(f"Saved {sample_count * 2} mixed samples to {output_file}")
+    mixed_shape = (sample_count * 2, *np.asarray(x1[0]).shape)
+    print(f"Saved mixed samples shape={mixed_shape} to {output_file}")
 
 
 def resolve_train_file(data_root, dataset_name):

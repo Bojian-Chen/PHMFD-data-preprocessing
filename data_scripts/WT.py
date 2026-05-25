@@ -1,11 +1,11 @@
 from collections import defaultdict
 from pathlib import Path
-import re
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from scipy.io import loadmat
 from scipy.signal import resample as scipy_resample
 
 from data_scripts.fewshot import (
@@ -15,21 +15,30 @@ from data_scripts.fewshot import (
 
 
 DATASET_CONFIG = {
-    "target": "JNUFinetuneProcessor",
+    "target": "WTFinetuneProcessor",
     "method": "prepare_dataset",
     "task": "finetune",
-    "raw_folders": ("JNU",),
-    "save_folder": "JNU",
+    "raw_folders": ("WT",),
+    "save_folder": "WT",
 }
 
 
-class JNUFinetuneProcessor:
+LABEL_MAP = {
+    "healthy": 0,
+    "broken": 1,
+    "missing_tooth": 2,
+    "root_crack": 3,
+    "wear": 4,
+}
+
+
+class WTFinetuneProcessor:
     def __init__(
         self,
         raw_dir=None,
         save_dir=None,
         sample_time=0.1,
-        sampling_frequency=50000,
+        sampling_frequency=48000,
         norm_method="none",
         resampled_size=None,
         train_size=0.6,
@@ -38,6 +47,8 @@ class JNUFinetuneProcessor:
         seed=42,
         fewshot_seed=42,
         fewshot_shots=None,
+        slice_start_sec=70,
+        slice_end_sec=90,
     ):
         self.dataset_name = DATASET_CONFIG["save_folder"]
         self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
@@ -57,12 +68,8 @@ class JNUFinetuneProcessor:
         self.fewshot_shots = (
             int(fewshot_shots) if fewshot_shots is not None else None
         )
-        self.label_map = {
-            "n": 0,
-            "ib": 1,
-            "ob": 2,
-            "tb": 3,
-        }
+        self.slice_start = int(round(float(slice_start_sec) * self.sampling_frequency))
+        self.slice_end = int(round(float(slice_end_sec) * self.sampling_frequency))
 
         if self.window_size <= 0:
             raise ValueError("window_size must be positive.")
@@ -72,9 +79,12 @@ class JNUFinetuneProcessor:
             raise ValueError("train_size + val_size + test_size must equal 1.0.")
         if self.fewshot_shots is not None and self.fewshot_shots <= 0:
             raise ValueError("fewshot_shots must be positive.")
+        if self.slice_end <= self.slice_start:
+            raise ValueError("slice_end_sec must be greater than slice_start_sec.")
 
     def prepare_dataset(self):
         samples, labels, groups = self.load_samples()
+
         if self.fewshot_shots is not None:
             split_name = f"train_{self.fewshot_shots}shot"
             indices = sample_balanced_shot_indices(
@@ -83,17 +93,7 @@ class JNUFinetuneProcessor:
                 self.fewshot_shots,
                 self.fewshot_seed,
             )
-            split_samples = samples[indices]
-            split_labels = labels[indices]
-            split_samples = normalize_per_sample(split_samples, self.norm_method)
-            split_samples = maybe_resample(split_samples, self.resampled_size)
-            split_shape = tuple(split_samples.shape)
-            save_parquet(
-                split_samples,
-                split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
-            )
+            split_shape = self.save_indices(split_name, samples, labels, indices)
             print(f"{self.dataset_name}: saved {split_name}={split_shape} to {self.save_dir}")
             return
 
@@ -107,17 +107,7 @@ class JNUFinetuneProcessor:
 
         split_shapes = {}
         for split_name, indices in split_indices.items():
-            split_samples = samples[indices]
-            split_labels = labels[indices]
-            split_samples = normalize_per_sample(split_samples, self.norm_method)
-            split_samples = maybe_resample(split_samples, self.resampled_size)
-            split_shapes[split_name] = tuple(split_samples.shape)
-            save_parquet(
-                split_samples,
-                split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
-            )
+            split_shapes[split_name] = self.save_indices(split_name, samples, labels, indices)
 
         shapes = ", ".join(
             f"{split_name}={shape}"
@@ -125,25 +115,42 @@ class JNUFinetuneProcessor:
         )
         print(f"{self.dataset_name}: saved finetune splits {shapes} to {self.save_dir}")
 
+    def save_indices(self, split_name, samples, labels, indices):
+        split_samples = samples[indices]
+        split_labels = labels[indices]
+        split_samples = normalize_per_sample(split_samples, self.norm_method)
+        split_samples = maybe_resample(split_samples, self.resampled_size)
+        save_parquet(
+            split_samples,
+            split_labels,
+            self.dataset_name,
+            self.save_dir / f"{split_name}.parquet",
+        )
+        return tuple(split_samples.shape)
+
     def load_samples(self):
         if not self.raw_dir.exists():
-            raise FileNotFoundError(f"JNU data directory does not exist: {self.raw_dir}")
+            raise FileNotFoundError(f"WT data directory does not exist: {self.raw_dir}")
 
         samples = []
         labels = []
         groups = []
-        for csv_path in sorted(self.raw_dir.glob("*.csv")):
-            label, speed = parse_jnu_filename(csv_path.stem)
-            signal = read_jnu_signal(csv_path)
-            windows = segment_signal(signal, self.window_size)
-            if len(windows) == 0:
-                continue
-            samples.append(windows)
-            labels.append(np.full(len(windows), label, dtype=np.int64))
-            groups.extend([(label, speed)] * len(windows))
+        for label_name, label in LABEL_MAP.items():
+            source_dir = self.raw_dir / label_name / "1"
+            if not source_dir.exists():
+                raise FileNotFoundError(f"WT folder does not exist: {source_dir}")
+            for mat_path in sorted(source_dir.glob("*.MAT")):
+                condition = parse_condition(mat_path.stem)
+                signal = read_wt_signal(mat_path, self.slice_start, self.slice_end)
+                windows = segment_signal(signal, self.window_size)
+                if len(windows) == 0:
+                    continue
+                samples.append(windows)
+                labels.append(np.full(len(windows), label, dtype=np.int64))
+                groups.extend([(label_name, condition)] * len(windows))
 
         if not samples:
-            raise RuntimeError(f"No JNU samples were found under {self.raw_dir}")
+            raise RuntimeError(f"No WT samples were found under {self.raw_dir}")
 
         return (
             np.concatenate(samples, axis=0).astype(np.float32),
@@ -152,24 +159,21 @@ class JNUFinetuneProcessor:
         )
 
 
-def parse_jnu_filename(file_stem):
-    lower_name = file_stem.lower()
-    for prefix in ("ib", "ob", "tb", "n"):
-        if lower_name.startswith(prefix):
-            label = {"n": 0, "ib": 1, "ob": 2, "tb": 3}[prefix]
-            break
-    else:
-        raise ValueError(f"Cannot infer JNU label from file name: {file_stem}")
-
-    match = re.search(r"(600|800|1000)", lower_name)
-    if not match:
-        raise ValueError(f"Cannot infer JNU speed from file name: {file_stem}")
-    return label, int(match.group(1))
+def parse_condition(file_stem):
+    parts = file_stem.split("_")
+    if len(parts) < 2:
+        raise ValueError(f"Cannot infer WT condition from file name: {file_stem}")
+    return parts[-1]
 
 
-def read_jnu_signal(path):
-    values = pd.read_csv(path, header=None).iloc[:, 0].to_numpy(dtype=np.float32)
-    return values.reshape(1, -1)
+def read_wt_signal(path, start, end):
+    mat = loadmat(path)
+    data = np.asarray(mat["Data"], dtype=np.float32)
+    if data.ndim != 2 or data.shape[1] < 2:
+        raise ValueError(f"Expected WT Data with at least 2 channels in {path}")
+    if end > len(data):
+        raise ValueError(f"WT file {path} is shorter than requested sample slice.")
+    return data[start:end, :2].T
 
 
 def segment_signal(signal, window_size):
@@ -279,7 +283,7 @@ def default_save_dir():
 
 
 if __name__ == "__main__":
-    processor = JNUFinetuneProcessor(
+    processor = WTFinetuneProcessor(
         norm_method="minmax",
         resampled_size=1024,
     )

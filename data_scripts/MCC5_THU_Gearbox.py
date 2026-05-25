@@ -15,21 +15,56 @@ from data_scripts.fewshot import (
 
 
 DATASET_CONFIG = {
-    "target": "JNUFinetuneProcessor",
+    "target": "MCC5THUGearboxFinetuneProcessor",
     "method": "prepare_dataset",
     "task": "finetune",
-    "raw_folders": ("JNU",),
-    "save_folder": "JNU",
+    "raw_folders": ("MCC5",),
+    "save_folder": "MCC5-THU-Gearbox",
 }
 
 
-class JNUFinetuneProcessor:
+LABEL_MAP = {
+    "health": 0,
+    "gear_pitting_H": 1,
+    "gear_pitting_M": 2,
+    "gear_pitting_L": 3,
+    "gear_wear_H": 4,
+    "gear_wear_M": 5,
+    "gear_wear_L": 6,
+    "miss_teeth": 7,
+    "teeth_break_H": 8,
+    "teeth_break_M": 9,
+    "teeth_break_L": 10,
+    "teeth_crack_H": 11,
+    "teeth_crack_M": 12,
+    "teeth_crack_L": 13,
+    "teeth_break_and_bearing_inner_H": 14,
+    "teeth_break_and_bearing_inner_M": 15,
+    "teeth_break_and_bearing_inner_L": 16,
+    "teeth_break_and_bearing_outer_H": 17,
+    "teeth_break_and_bearing_outer_M": 18,
+    "teeth_break_and_bearing_outer_L": 19,
+}
+
+
+FILE_PATTERN = re.compile(
+    r"(?P<label>.+)_torque_circulation_(?P<rpm>\d+)rpm_(?P<torque>\d+)Nm$"
+)
+SEGMENTS_SEC = ((10, 20), (40, 50))
+GEARBOX_COLUMNS = (
+    "gearbox_vibration_x",
+    "gearbox_vibration_y",
+    "gearbox_vibration_z",
+)
+
+
+class MCC5THUGearboxFinetuneProcessor:
     def __init__(
         self,
         raw_dir=None,
         save_dir=None,
         sample_time=0.1,
-        sampling_frequency=50000,
+        sampling_frequency=12800,
         norm_method="none",
         resampled_size=None,
         train_size=0.6,
@@ -57,12 +92,6 @@ class JNUFinetuneProcessor:
         self.fewshot_shots = (
             int(fewshot_shots) if fewshot_shots is not None else None
         )
-        self.label_map = {
-            "n": 0,
-            "ib": 1,
-            "ob": 2,
-            "tb": 3,
-        }
 
         if self.window_size <= 0:
             raise ValueError("window_size must be positive.")
@@ -75,6 +104,7 @@ class JNUFinetuneProcessor:
 
     def prepare_dataset(self):
         samples, labels, groups = self.load_samples()
+
         if self.fewshot_shots is not None:
             split_name = f"train_{self.fewshot_shots}shot"
             indices = sample_balanced_shot_indices(
@@ -83,17 +113,7 @@ class JNUFinetuneProcessor:
                 self.fewshot_shots,
                 self.fewshot_seed,
             )
-            split_samples = samples[indices]
-            split_labels = labels[indices]
-            split_samples = normalize_per_sample(split_samples, self.norm_method)
-            split_samples = maybe_resample(split_samples, self.resampled_size)
-            split_shape = tuple(split_samples.shape)
-            save_parquet(
-                split_samples,
-                split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
-            )
+            split_shape = self.save_indices(split_name, samples, labels, indices)
             print(f"{self.dataset_name}: saved {split_name}={split_shape} to {self.save_dir}")
             return
 
@@ -107,16 +127,11 @@ class JNUFinetuneProcessor:
 
         split_shapes = {}
         for split_name, indices in split_indices.items():
-            split_samples = samples[indices]
-            split_labels = labels[indices]
-            split_samples = normalize_per_sample(split_samples, self.norm_method)
-            split_samples = maybe_resample(split_samples, self.resampled_size)
-            split_shapes[split_name] = tuple(split_samples.shape)
-            save_parquet(
-                split_samples,
-                split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
+            split_shapes[split_name] = self.save_indices(
+                split_name,
+                samples,
+                labels,
+                indices,
             )
 
         shapes = ", ".join(
@@ -125,25 +140,38 @@ class JNUFinetuneProcessor:
         )
         print(f"{self.dataset_name}: saved finetune splits {shapes} to {self.save_dir}")
 
+    def save_indices(self, split_name, samples, labels, indices):
+        split_samples = samples[indices]
+        split_labels = labels[indices]
+        split_samples = normalize_per_sample(split_samples, self.norm_method)
+        split_samples = maybe_resample(split_samples, self.resampled_size)
+        save_parquet(
+            split_samples,
+            split_labels,
+            self.dataset_name,
+            self.save_dir / f"{split_name}.parquet",
+        )
+        return tuple(split_samples.shape)
+
     def load_samples(self):
         if not self.raw_dir.exists():
-            raise FileNotFoundError(f"JNU data directory does not exist: {self.raw_dir}")
+            raise FileNotFoundError(f"MCC5-THU-Gearbox data directory does not exist: {self.raw_dir}")
 
         samples = []
         labels = []
         groups = []
-        for csv_path in sorted(self.raw_dir.glob("*.csv")):
-            label, speed = parse_jnu_filename(csv_path.stem)
-            signal = read_jnu_signal(csv_path)
+        for csv_path in sorted(self.raw_dir.glob("*_torque_circulation_*.csv")):
+            label_key, condition = parse_mcc5_filename(csv_path.stem)
+            signal = read_mcc5_signal(csv_path, self.sampling_frequency)
             windows = segment_signal(signal, self.window_size)
             if len(windows) == 0:
                 continue
             samples.append(windows)
-            labels.append(np.full(len(windows), label, dtype=np.int64))
-            groups.extend([(label, speed)] * len(windows))
+            labels.append(np.full(len(windows), LABEL_MAP[label_key], dtype=np.int64))
+            groups.extend([(label_key, condition)] * len(windows))
 
         if not samples:
-            raise RuntimeError(f"No JNU samples were found under {self.raw_dir}")
+            raise RuntimeError(f"No MCC5-THU-Gearbox torque_circulation samples found under {self.raw_dir}")
 
         return (
             np.concatenate(samples, axis=0).astype(np.float32),
@@ -152,24 +180,33 @@ class JNUFinetuneProcessor:
         )
 
 
-def parse_jnu_filename(file_stem):
-    lower_name = file_stem.lower()
-    for prefix in ("ib", "ob", "tb", "n"):
-        if lower_name.startswith(prefix):
-            label = {"n": 0, "ib": 1, "ob": 2, "tb": 3}[prefix]
-            break
-    else:
-        raise ValueError(f"Cannot infer JNU label from file name: {file_stem}")
-
-    match = re.search(r"(600|800|1000)", lower_name)
-    if not match:
-        raise ValueError(f"Cannot infer JNU speed from file name: {file_stem}")
-    return label, int(match.group(1))
+def parse_mcc5_filename(file_stem):
+    match = FILE_PATTERN.fullmatch(file_stem)
+    if match is None:
+        raise ValueError(f"Cannot infer MCC5-THU-Gearbox label/condition from {file_stem}")
+    label_key = match.group("label")
+    if label_key not in LABEL_MAP:
+        raise ValueError(f"Unknown MCC5-THU-Gearbox label code: {label_key}")
+    condition = f"{match.group('rpm')}rpm_{match.group('torque')}Nm"
+    return label_key, condition
 
 
-def read_jnu_signal(path):
-    values = pd.read_csv(path, header=None).iloc[:, 0].to_numpy(dtype=np.float32)
-    return values.reshape(1, -1)
+def read_mcc5_signal(path, sampling_frequency):
+    segment_arrays = []
+    for start_sec, end_sec in SEGMENTS_SEC:
+        start = int(round(start_sec * sampling_frequency))
+        nrows = int(round((end_sec - start_sec) * sampling_frequency))
+        df = pd.read_csv(
+            path,
+            usecols=GEARBOX_COLUMNS,
+            skiprows=range(1, start + 1),
+            nrows=nrows,
+        )
+        data = df.to_numpy(dtype=np.float32, copy=True)
+        if len(data) != nrows:
+            raise ValueError(f"MCC5-THU-Gearbox file {path} is shorter than requested {start_sec}-{end_sec}s segment.")
+        segment_arrays.append(data.T)
+    return np.concatenate(segment_arrays, axis=1)
 
 
 def segment_signal(signal, window_size):
@@ -214,7 +251,7 @@ def split_finetune_indices(
         splits["test"].extend(indices[n_train + n_val :])
 
     splits["train"] = train_full
-    splits["train_1p"] = sample_fewshot_train(
+    splits["train_1p"] = sample_balanced_fraction_indices(
         train_full,
         groups,
         tiny_train_ratio,
@@ -224,10 +261,6 @@ def split_finetune_indices(
         splits[split_name] = np.asarray(splits[split_name], dtype=np.int64)
         rng.shuffle(splits[split_name])
     return splits
-
-
-def sample_fewshot_train(train_indices, groups, fraction, seed):
-    return sample_balanced_fraction_indices(train_indices, groups, fraction, seed)
 
 
 def normalize_per_sample(samples, norm_method):
@@ -279,7 +312,7 @@ def default_save_dir():
 
 
 if __name__ == "__main__":
-    processor = JNUFinetuneProcessor(
+    processor = MCC5THUGearboxFinetuneProcessor(
         norm_method="minmax",
         resampled_size=1024,
     )

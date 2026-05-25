@@ -1,11 +1,11 @@
 from collections import defaultdict
 from pathlib import Path
-import re
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from scipy.io import loadmat
 from scipy.signal import resample as scipy_resample
 
 from data_scripts.fewshot import (
@@ -14,22 +14,17 @@ from data_scripts.fewshot import (
 )
 
 
-DATASET_CONFIG = {
-    "target": "JNUFinetuneProcessor",
-    "method": "prepare_dataset",
-    "task": "finetune",
-    "raw_folders": ("JNU",),
-    "save_folder": "JNU",
-}
+class SDUSTMatFinetuneProcessor:
+    subset_dir_name = None
+    label_map = {}
 
-
-class JNUFinetuneProcessor:
     def __init__(
         self,
-        raw_dir=None,
-        save_dir=None,
+        dataset_name,
+        raw_dir,
+        save_dir,
         sample_time=0.1,
-        sampling_frequency=50000,
+        sampling_frequency=25600,
         norm_method="none",
         resampled_size=None,
         train_size=0.6,
@@ -39,9 +34,9 @@ class JNUFinetuneProcessor:
         fewshot_seed=42,
         fewshot_shots=None,
     ):
-        self.dataset_name = DATASET_CONFIG["save_folder"]
-        self.raw_dir = Path(raw_dir) if raw_dir is not None else default_raw_dir()
-        self.save_dir = Path(save_dir) if save_dir is not None else default_save_dir()
+        self.dataset_name = dataset_name
+        self.raw_dir = Path(raw_dir)
+        self.save_dir = Path(save_dir)
         self.sample_time = float(sample_time)
         self.sampling_frequency = int(sampling_frequency)
         self.window_size = int(round(self.sampling_frequency * self.sample_time))
@@ -57,12 +52,6 @@ class JNUFinetuneProcessor:
         self.fewshot_shots = (
             int(fewshot_shots) if fewshot_shots is not None else None
         )
-        self.label_map = {
-            "n": 0,
-            "ib": 1,
-            "ob": 2,
-            "tb": 3,
-        }
 
         if self.window_size <= 0:
             raise ValueError("window_size must be positive.")
@@ -75,6 +64,7 @@ class JNUFinetuneProcessor:
 
     def prepare_dataset(self):
         samples, labels, groups = self.load_samples()
+
         if self.fewshot_shots is not None:
             split_name = f"train_{self.fewshot_shots}shot"
             indices = sample_balanced_shot_indices(
@@ -83,17 +73,7 @@ class JNUFinetuneProcessor:
                 self.fewshot_shots,
                 self.fewshot_seed,
             )
-            split_samples = samples[indices]
-            split_labels = labels[indices]
-            split_samples = normalize_per_sample(split_samples, self.norm_method)
-            split_samples = maybe_resample(split_samples, self.resampled_size)
-            split_shape = tuple(split_samples.shape)
-            save_parquet(
-                split_samples,
-                split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
-            )
+            split_shape = self.save_indices(split_name, samples, labels, indices)
             print(f"{self.dataset_name}: saved {split_name}={split_shape} to {self.save_dir}")
             return
 
@@ -107,16 +87,11 @@ class JNUFinetuneProcessor:
 
         split_shapes = {}
         for split_name, indices in split_indices.items():
-            split_samples = samples[indices]
-            split_labels = labels[indices]
-            split_samples = normalize_per_sample(split_samples, self.norm_method)
-            split_samples = maybe_resample(split_samples, self.resampled_size)
-            split_shapes[split_name] = tuple(split_samples.shape)
-            save_parquet(
-                split_samples,
-                split_labels,
-                self.dataset_name,
-                self.save_dir / f"{split_name}.parquet",
+            split_shapes[split_name] = self.save_indices(
+                split_name,
+                samples,
+                labels,
+                indices,
             )
 
         shapes = ", ".join(
@@ -125,25 +100,44 @@ class JNUFinetuneProcessor:
         )
         print(f"{self.dataset_name}: saved finetune splits {shapes} to {self.save_dir}")
 
-    def load_samples(self):
-        if not self.raw_dir.exists():
-            raise FileNotFoundError(f"JNU data directory does not exist: {self.raw_dir}")
+    def save_indices(self, split_name, samples, labels, indices):
+        split_samples = samples[indices]
+        split_labels = labels[indices]
+        split_samples = normalize_per_sample(split_samples, self.norm_method)
+        split_samples = maybe_resample(split_samples, self.resampled_size)
+        save_parquet(
+            split_samples,
+            split_labels,
+            self.dataset_name,
+            self.save_dir / f"{split_name}.parquet",
+        )
+        return tuple(split_samples.shape)
 
+    def load_samples(self):
+        subset_dir = self.resolve_subset_dir()
         samples = []
         labels = []
         groups = []
-        for csv_path in sorted(self.raw_dir.glob("*.csv")):
-            label, speed = parse_jnu_filename(csv_path.stem)
-            signal = read_jnu_signal(csv_path)
-            windows = segment_signal(signal, self.window_size)
-            if len(windows) == 0:
-                continue
-            samples.append(windows)
-            labels.append(np.full(len(windows), label, dtype=np.int64))
-            groups.extend([(label, speed)] * len(windows))
+
+        for label_name, label in self.label_map.items():
+            label_dir = subset_dir / label_name
+            if not label_dir.exists():
+                raise FileNotFoundError(f"SDUST label folder does not exist: {label_dir}")
+            for mat_path in sorted(label_dir.glob("*.mat")):
+                parsed = self.parse_file(mat_path)
+                if parsed is None:
+                    continue
+                label_key, condition = parsed
+                signal = read_sdust_signal(mat_path)
+                windows = segment_signal(signal, self.window_size)
+                if len(windows) == 0:
+                    continue
+                samples.append(windows)
+                labels.append(np.full(len(windows), label, dtype=np.int64))
+                groups.extend([(label_key, condition)] * len(windows))
 
         if not samples:
-            raise RuntimeError(f"No JNU samples were found under {self.raw_dir}")
+            raise RuntimeError(f"No {self.dataset_name} samples were found under {subset_dir}")
 
         return (
             np.concatenate(samples, axis=0).astype(np.float32),
@@ -151,25 +145,40 @@ class JNUFinetuneProcessor:
             groups,
         )
 
+    def resolve_subset_dir(self):
+        candidates = (
+            self.raw_dir / self.subset_dir_name,
+            self.raw_dir,
+        )
+        for candidate in candidates:
+            if candidate.exists() and any(
+                (candidate / label_name).exists()
+                for label_name in self.label_map
+            ):
+                return candidate
+        raise FileNotFoundError(
+            f"Cannot find SDUST subset '{self.subset_dir_name}' under {self.raw_dir}"
+        )
 
-def parse_jnu_filename(file_stem):
-    lower_name = file_stem.lower()
-    for prefix in ("ib", "ob", "tb", "n"):
-        if lower_name.startswith(prefix):
-            label = {"n": 0, "ib": 1, "ob": 2, "tb": 3}[prefix]
-            break
-    else:
-        raise ValueError(f"Cannot infer JNU label from file name: {file_stem}")
-
-    match = re.search(r"(600|800|1000)", lower_name)
-    if not match:
-        raise ValueError(f"Cannot infer JNU speed from file name: {file_stem}")
-    return label, int(match.group(1))
+    def parse_file(self, mat_path):
+        raise NotImplementedError
 
 
-def read_jnu_signal(path):
-    values = pd.read_csv(path, header=None).iloc[:, 0].to_numpy(dtype=np.float32)
-    return values.reshape(1, -1)
+def is_variable_condition(tokens):
+    joined = " ".join(tokens).lower()
+    return "~" in joined or "-" in joined or "flu" in joined
+
+
+def read_sdust_signal(path):
+    mat = loadmat(path, squeeze_me=True, struct_as_record=False)
+    try:
+        values = mat["Signal"].y_values.values
+    except KeyError as exc:
+        raise KeyError(f"Cannot find Signal.y_values.values in {path}") from exc
+    data = np.asarray(values, dtype=np.float32)
+    if data.ndim != 2 or data.shape[1] != 6:
+        raise ValueError(f"Expected SDUST signal with 6 channels in {path}, got {data.shape}")
+    return data.T
 
 
 def segment_signal(signal, window_size):
@@ -214,7 +223,7 @@ def split_finetune_indices(
         splits["test"].extend(indices[n_train + n_val :])
 
     splits["train"] = train_full
-    splits["train_1p"] = sample_fewshot_train(
+    splits["train_1p"] = sample_balanced_fraction_indices(
         train_full,
         groups,
         tiny_train_ratio,
@@ -224,10 +233,6 @@ def split_finetune_indices(
         splits[split_name] = np.asarray(splits[split_name], dtype=np.int64)
         rng.shuffle(splits[split_name])
     return splits
-
-
-def sample_fewshot_train(train_indices, groups, fraction, seed):
-    return sample_balanced_fraction_indices(train_indices, groups, fraction, seed)
 
 
 def normalize_per_sample(samples, norm_method):
@@ -268,19 +273,3 @@ def save_parquet(samples, labels, dataset_name, save_path):
         }
     )
     pq.write_table(pa.Table.from_pandas(df), save_path)
-
-
-def default_raw_dir():
-    return Path("Raw_data") / "Finetune" / DATASET_CONFIG["raw_folders"][0]
-
-
-def default_save_dir():
-    return Path("Process_data") / "Finetune" / DATASET_CONFIG["save_folder"]
-
-
-if __name__ == "__main__":
-    processor = JNUFinetuneProcessor(
-        norm_method="minmax",
-        resampled_size=1024,
-    )
-    processor.prepare_dataset()
