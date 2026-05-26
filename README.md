@@ -76,32 +76,153 @@ huggingface-cli download bojian1/PHMFD-data \
 
 ## 数据集元信息
 
-下表中的采样频率、通道数、使用通道、类别和工况信息以当前 `data_scripts/` 预处理代码为准；来源 link 和 bib 信息未确认时留空，后续可继续补充。
+下表中的采样频率、通道数、使用通道、类别和工况信息以当前 `data_scripts/` 预处理代码为准；来源 link 和 bib 信息未确认时留空，后续可继续补充。为避免 GitHub 表格横向滚动，概览表只保留短字段，长描述放在下方折叠详情中。
 
-| 数据集             | 数据集类型    | 采样频率                 | 原始通道数               | 使用的通道                                                    | 类别/工况信息                                                                                                                                                                                                                                                                                                                                             | 来源 link                                                                                                                                                                  | 引用文献 bib                                                                                    |
-| ------------------ | ------------- | ------------------------ | ------------------------ | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `CNC`              | 工业/CNC 加工 | 2 kHz                    | 3                        | `vibration_data` 全部 3 通道                                  | 类别：`good`, `bad`；工况：`OP00`-`OP14`，按机器 `M01`/`M02`/`M03` 分别输出                                                                                                                                                                                                                                                                               | [Github](https://github.com/boschresearch/CNC_Machining/tree/main)                                                                                                         | [Ref](https://www.sciencedirect.com/science/article/pii/S2212827122002384)                      |
-| `CWRU`             | 轴承          | 12/48 kHz (只用了12 kHz) | 2                        | `DE_time`, x`FE_time`                                         |                                                                                                                                                                                                                                                                                                                                                           | [CWRU Bearing Data Center](https://engineering.case.edu/bearingdatacenter/download-data-file)                                                                              | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327015002034)                 |
-| `FEMTO`            | 轴承          | 25.6 kHz                 | 6                        | CSV 第 5、6 列加速度通道                                      |                                                                                                                                                                                                                                                                                                                                                           | [Github](https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset)                                                                                               | [Ref](https://hal.science/hal-00719503/)                                                        |
-| `HITSM`            | 轴承          | 51.2 kHz                 | 1                        | `.mat` 信号通道                                               |                                                                                                                                                                                                                                                                                                                                                           | [Github](https://github.com/hitwzc/Bearing-datasets)                                                                                                                       | [MST](https://iopscience.iop.org/article/10.1088/1361-6501/ac7941/meta)                         |
-| `HUST_Bearing`     | 轴承          | 25.6 kHz                 | 4                        | 最后三个通道，即 x/y/z 振动通道                               | 类别：`H`, `0.5X_I`, `I`, `0.5X_O`, `O`, `0.5X_B`, `B`, `0.5X_C`, `C`；工况：固定转速 `20`, `25`, `30`, `35`, `40`, `60`, `65`, `70`, `75`, `80` Hz；忽略文件名包含 `_VS_` 的变转速数据                                                                                                                                                                   | [Github](https://github.com/CHAOZHAO-1/HUSTbearing-dataset)                                                                                                                | [Zhao2024](https://doi.org/10.1016/j.ress.2024.109964)                                          |
-| `HUST_Gearbox`     | 齿轮箱        | 25.6 kHz                 | 4                        | 最后三个通道，即 x/y/z 振动通道                               | 类别：`H`, `B`, `M`；工况：固定转速 `20`, `25`, `30`, `35`, `40` Hz 与负载 `L0`-`L4`；忽略文件名包含 `_VS_` 的变转速数据                                                                                                                                                                                                                                  | [Github](https://github.com/CHAOZHAO-1/HUSTgearbox-dataset)                                                                                                                | [Zhao2024](https://doi.org/10.1016/j.ress.2024.109964)                                          |
-| `HUST_Motor`       | 电机          | 25.6 kHz                 | 4                        | 全部 4 个数据通道，即 x/y/z 振动通道和 `Sound` 声学通道       | 类别：`H`, `BF`, `BOW`, `BROKEN`, `MISAL`, `UNBAL`；工况：转速 `5`, `10`, `20`, `30` Hz                                                                                                                                                                                                                                                                   | [Github](https://github.com/CHAOZHAO-1/HUSTmotor-multi-modal-dataset)                                                                                                      | [EAAI](https://www.sciencedirect.com/science/article/abs/pii/S0952197625025904)                 |
-| `IMS_FD`           | 轴承          | 20.48 kHz                | 1st test: 8；2nd test: 4 | `bearing1_1`, `bearing1_3`, `bearing1_4`, `bearing2_1` 对应列 | 类别：normal, inner race, roller element, outer race；工况：无单独工况分组                                                                                                                                                                                                                                                                                | [NASA IMS Bearings](https://data.nasa.gov/dataset/ims-bearings)                                                                                                            | Rexnord technical services: Bearing data set                                                    |
-| `JNU`              | 轴承          | 50 kHz                   | 1                        | 垂直方向振动信号                                              | 类别：`n`, `ib`, `ob`, `tb`；工况：转速 `600`, `800`, `1000` r/min                                                                                                                                                                                                                                                                                        | [Github](https://github.com/ClarkGableWang/JNU-Bearing-Dataset)                                                                                                            | [Sensors](https://www.mdpi.com/1424-8220/13/6/8013)                                             |
-| `KAIST`            | 轴承          | 25.6 kHz                 | 4                        | `bearingA_x`, `bearingA_y`, `bearingB_x`, `bearingB_y`        |                                                                                                                                                                                                                                                                                                                                                           | [Part1](https://data.mendeley.com/datasets/vxkj334rzv/7) [Part2](https://data.mendeley.com/datasets/x3vhp8t6hg/7) [Part3](https://data.mendeley.com/datasets/j8d8pfkvj2/4) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340923001671)            |
-| `MCC5-THU-Gearbox` | 齿轮箱        | 12.8 kHz                 | 8                        | 最后三个通道，即 `gearbox_vibration_x/y/z`                    | 类别：`health`, `gear_pitting_H/M/L`, `gear_wear_H/M/L`, `miss_teeth`, `teeth_break_H/M/L`, `teeth_crack_H/M/L`, `teeth_break_and_bearing_inner_H/M/L`, `teeth_break_and_bearing_outer_H/M/L`；仅使用 `torque_circulation` 文件，截取 10-20s 和 40-50s 两段固定工况；工况：`1000/2000/3000rpm` 与 `10/20Nm`                                               | [Github](https://github.com/liuzy0708/MCC5-THU-Gearbox-Benchmark-Datasets)                                                                                                 | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340924004220)            |
-| `MCC5-THU-Motor`   | 电机          | 12.8 kHz                 | 8                        | 第 3-5 通道，即电机 x/y/z 振动通道                            | 类别：`health`, `bearing_ball_H/L`, `bearing_inner_H/L`, `bearing_outer_H/L`, `bearing_outer_H_and_inner_H`, `bend`, `broken_bar`, `dynamic_eccentricity`, `static_eccentricity_H/L`, `voltage_unbalance_L`, `winding_H/L` 及复合故障；仅使用 `torque_circulation` 文件，截取负载 max 的稳定平台 15-25s 和 65-75s；工况：`1000/2000/3000rpm` 与 `20/40Nm` | [Github](https://github.com/liuzy0708/MCC5-THU-Motor-Benchmark-Datasets)                                                                                                   | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340926001368)            |
-| `MFPT`             | 轴承          | 97656/48828              | 1                        | `bearing` 结构中的振动信号                                    |                                                                                                                                                                                                                                                                                                                                                           | [MFPT Fault Data Sets](https://www.mfpt.org/fault-data-sets/)                                                                                                              | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327022005714)                 |
-| `PU`               | 轴承          | 64 kHz                   | 1                        | `Y` 结构中的振动信号                                          | 类别：`K001`, `KA04`, `KA15`, `KA16`, `KA22`, `KA30`, `KB23`, `KB24`, `KB27`, `KI14`, `KI16`, `KI17`, `KI18`, `KI21`；工况：`N15_M07_F10`, `N09_M07_F10`, `N15_M01_F10`, `N15_M07_F04`                                                                                                                                                                    | [Paderborn Bearing DataCenter](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter)                                                                             | [PHM Society](http://www.papers.phmsociety.org/index.php/phme/article/view/1577)                |
-| `SDUST_Bearing`    | 轴承          | 25.6 kHz                 | 6                        | `Signal.y_values.values` 全部 6 通道                          | 类别：`NC`, `IF0.2`, `IF0.4`, `IF0.6`, `OF0.2`, `OF0.4`, `OF0.6`, `RF0.2`, `RF0.4`, `RF0.6`；工况：固定转速 `1000`, `1500`, `1800`, `2000`, `2500`, `3000` rpm，且仅保留负载 `60` N；忽略 `1797`、`800~1500`、`1000-2000` 等数据                                                                                                                          | [Github](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main)                                                                                                          | [KBS](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X)                  |
-| `SDUST_Gear`       | 齿轮箱        | 25.6 kHz                 | 6                        | `Signal.y_values.values` 全部 6 通道                          | 类别：`NC`, `太阳断裂`, `太阳点蚀`, `太阳磨损`, `行星断裂`, `行星点蚀`, `行星磨损`；工况：固定转速 `1000`, `1500`, `1800`, `2000`, `2500` rpm，且仅保留负载 `0.5A` 的第 `1` 次采集；忽略 `0-0.2A`, `0-0.35A`, `0-0.5A` 和 `flu` 波动工况                                                                                                                  | [Github](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main)                                                                                                          | [KBS](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X)                  |
-| `SEU_Bearing`      | 轴承          | 5.12 kHz                 | 8                        | 第 2、3、4 通道                                               | 类别：`health`, `ball`, `inner`, `outer`, `comb`；工况：`20_0`, `30_2`                                                                                                                                                                                                                                                                                    | [Github](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox)                                                                                             | [TII](https://ieeexplore.ieee.org/abstract/document/8432110)                                    |
-| `SEU_Gear`         | 齿轮          | 5.12 kHz                 | 8                        | 第 2、3、4 通道                                               | 类别：`health`, `chipped`, `miss`, `root`, `surface`；工况：`20_0`, `30_2`                                                                                                                                                                                                                                                                                | [Github](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox)                                                                                             | [TII](https://ieeexplore.ieee.org/abstract/document/8432110)                                    |
-| `TORINO`           | 轴承          | 51.2 kHz                 | 6                        | `.mat` 中全部 6 个通道                                        |                                                                                                                                                                                                                                                                                                                                                           |                                                                                                                                                                            | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327018306800)                 |
-| `UO(ottawwa)`      | 轴承          | 200 kHz                  | 2                        | `Channel_1`                                                   |                                                                                                                                                                                                                                                                                                                                                           | [Mendeley Data](https://data.mendeley.com/datasets/v43hmbwxpm/1)                                                                                                           | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340918314124?via%3Dihub) |
-| `WT`               | 齿轮/传动系统 | 48 kHz                   | 4                        | `Data` 前 2 通道，即 x/y 振动通道；仅取 70-90s                | 类别：`healthy`, `broken`, `missing_tooth`, `root_crack`, `wear`；工况：`.MAT` 文件名下划线后的条件值，如 `20`, `25`, `30`, `35`, `40`, `45`, `50`, `55`；当前仅使用每类 `1/` 文件夹                                                                                                                                                                      | [Github](https://github.com/Liudd-BJUT/WT-planetary-gearbox-dataset)                                                                                                       | [MST](https://iopscience.iop.org/article/10.1088/1361-6501/acf390)                              |
-| `XJTUSY`           | 轴承          | 25.6 kHz                 | 2                        | `Horizontal_vibration_signals`, `Vertical_vibration_signals`  |                                                                                                                                                                                                                                                                                                                                                           | [XJTU-SY Bearing Datasets](http://biaowang.tech/xjtu-sy-bearing-datasets/)                                                                                                 | [TR](https://ieeexplore.ieee.org/document/8576668)                                              |
+| 数据集 | 类型 | 采样频率 | 通道 | 资料 |
+| ------ | ---- | -------- | ---- | ---- |
+| `CNC` | 工业/CNC 加工 | 2 kHz | 3 / 3 | [source](https://github.com/boschresearch/CNC_Machining/tree/main), [bib](https://www.sciencedirect.com/science/article/pii/S2212827122002384) |
+| `CWRU` | 轴承 | 12/48 kHz (使用 12 kHz) | 2 / 2 | [source](https://engineering.case.edu/bearingdatacenter/download-data-file), [bib](https://www.sciencedirect.com/science/article/abs/pii/S0888327015002034) |
+| `FEMTO` | 轴承 | 25.6 kHz | 6 / 2 | [source](https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset), [bib](https://hal.science/hal-00719503/) |
+| `HITSM` | 轴承 | 51.2 kHz | 1 / 1 | [source](https://github.com/hitwzc/Bearing-datasets), [bib](https://iopscience.iop.org/article/10.1088/1361-6501/ac7941/meta) |
+| `HUST_Bearing` | 轴承 | 25.6 kHz | 4 / 3 | [source](https://github.com/CHAOZHAO-1/HUSTbearing-dataset), [bib](https://doi.org/10.1016/j.ress.2024.109964) |
+| `HUST_Gearbox` | 齿轮箱 | 25.6 kHz | 4 / 3 | [source](https://github.com/CHAOZHAO-1/HUSTgearbox-dataset), [bib](https://doi.org/10.1016/j.ress.2024.109964) |
+| `HUST_Motor` | 电机 | 25.6 kHz | 4 / 4 | [source](https://github.com/CHAOZHAO-1/HUSTmotor-multi-modal-dataset), [bib](https://www.sciencedirect.com/science/article/abs/pii/S0952197625025904) |
+| `IMS_FD` | 轴承 | 20.48 kHz | 8 或 4 / 4 | [source](https://data.nasa.gov/dataset/ims-bearings), bib: Rexnord technical services |
+| `JNU` | 轴承 | 50 kHz | 1 / 1 | [source](https://github.com/ClarkGableWang/JNU-Bearing-Dataset), [bib](https://www.mdpi.com/1424-8220/13/6/8013) |
+| `KAIST` | 轴承 | 25.6 kHz | 4 / 4 | [part1](https://data.mendeley.com/datasets/vxkj334rzv/7), [part2](https://data.mendeley.com/datasets/x3vhp8t6hg/7), [part3](https://data.mendeley.com/datasets/j8d8pfkvj2/4), [bib](https://www.sciencedirect.com/science/article/pii/S2352340923001671) |
+| `MCC5-THU-Gearbox` | 齿轮箱 | 12.8 kHz | 8 / 3 | [source](https://github.com/liuzy0708/MCC5-THU-Gearbox-Benchmark-Datasets), [bib](https://www.sciencedirect.com/science/article/pii/S2352340924004220) |
+| `MCC5-THU-Motor` | 电机 | 12.8 kHz | 8 / 3 | [source](https://github.com/liuzy0708/MCC5-THU-Motor-Benchmark-Datasets), [bib](https://www.sciencedirect.com/science/article/pii/S2352340926001368) |
+| `MFPT` | 轴承 | 97656/48828 Hz | 1 / 1 | [source](https://www.mfpt.org/fault-data-sets/), [bib](https://www.sciencedirect.com/science/article/abs/pii/S0888327022005714) |
+| `PU` | 轴承 | 64 kHz | 1 / 1 | [source](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter), [bib](http://www.papers.phmsociety.org/index.php/phme/article/view/1577) |
+| `SDUST_Bearing` | 轴承 | 25.6 kHz | 6 / 6 | [source](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main), [bib](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X) |
+| `SDUST_Gear` | 齿轮箱 | 25.6 kHz | 6 / 6 | [source](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main), [bib](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X) |
+| `SEU_Bearing` | 轴承 | 5.12 kHz | 8 / 3 | [source](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox), [bib](https://ieeexplore.ieee.org/abstract/document/8432110) |
+| `SEU_Gear` | 齿轮 | 5.12 kHz | 8 / 3 | [source](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox), [bib](https://ieeexplore.ieee.org/abstract/document/8432110) |
+| `TORINO` | 轴承 | 51.2 kHz | 6 / 6 | [bib](https://www.sciencedirect.com/science/article/abs/pii/S0888327018306800) |
+| `UO (Ottawa)` | 轴承 | 200 kHz | 2 / 1 | [source](https://data.mendeley.com/datasets/v43hmbwxpm/1), [bib](https://www.sciencedirect.com/science/article/pii/S2352340918314124?via%3Dihub) |
+| `WT` | 齿轮/传动系统 | 48 kHz | 4 / 2 | [source](https://github.com/Liudd-BJUT/WT-planetary-gearbox-dataset), [bib](https://iopscience.iop.org/article/10.1088/1361-6501/acf390) |
+| `XJTUSY` | 轴承 | 25.6 kHz | 2 / 2 | [source](http://biaowang.tech/xjtu-sy-bearing-datasets/), [bib](https://ieeexplore.ieee.org/document/8576668) |
+
+<details>
+<summary>展开使用通道、类别和工况详情</summary>
+
+### `CNC`
+
+- 使用通道：`vibration_data` 全部 3 通道。
+- 类别：`good`, `bad`。
+- 工况：`OP00`-`OP14`，按机器 `M01`/`M02`/`M03` 分别输出。
+
+### `CWRU`
+
+- 使用通道：`DE_time`, `FE_time`。
+
+### `FEMTO`
+
+- 使用通道：CSV 第 5、6 列加速度通道。
+
+### `HITSM`
+
+- 使用通道：`.mat` 信号通道。
+
+### `HUST_Bearing`
+
+- 使用通道：最后三个通道，即 x/y/z 振动通道。
+- 类别：`H`, `0.5X_I`, `I`, `0.5X_O`, `O`, `0.5X_B`, `B`, `0.5X_C`, `C`。
+- 工况：固定转速 `20`, `25`, `30`, `35`, `40`, `60`, `65`, `70`, `75`, `80` Hz；忽略文件名包含 `_VS_` 的变转速数据。
+
+### `HUST_Gearbox`
+
+- 使用通道：最后三个通道，即 x/y/z 振动通道。
+- 类别：`H`, `B`, `M`。
+- 工况：固定转速 `20`, `25`, `30`, `35`, `40` Hz 与负载 `L0`-`L4`；忽略文件名包含 `_VS_` 的变转速数据。
+
+### `HUST_Motor`
+
+- 使用通道：全部 4 个数据通道，即 x/y/z 振动通道和 `Sound` 声学通道。
+- 类别：`H`, `BF`, `BOW`, `BROKEN`, `MISAL`, `UNBAL`。
+- 工况：转速 `5`, `10`, `20`, `30` Hz。
+
+### `IMS_FD`
+
+- 使用通道：`bearing1_1`, `bearing1_3`, `bearing1_4`, `bearing2_1` 对应列。
+- 类别：normal, inner race, roller element, outer race。
+- 工况：无单独工况分组。
+
+### `JNU`
+
+- 使用通道：垂直方向振动信号。
+- 类别：`n`, `ib`, `ob`, `tb`。
+- 工况：转速 `600`, `800`, `1000` r/min。
+
+### `KAIST`
+
+- 使用通道：`bearingA_x`, `bearingA_y`, `bearingB_x`, `bearingB_y`。
+
+### `MCC5-THU-Gearbox`
+
+- 使用通道：最后三个通道，即 `gearbox_vibration_x/y/z`。
+- 类别：`health`, `gear_pitting_H/M/L`, `gear_wear_H/M/L`, `miss_teeth`, `teeth_break_H/M/L`, `teeth_crack_H/M/L`, `teeth_break_and_bearing_inner_H/M/L`, `teeth_break_and_bearing_outer_H/M/L`。
+- 工况：仅使用 `torque_circulation` 文件，截取 10-20s 和 40-50s 两段固定工况；转速 `1000/2000/3000rpm` 与负载 `10/20Nm`。
+
+### `MCC5-THU-Motor`
+
+- 使用通道：第 3-5 通道，即电机 x/y/z 振动通道。
+- 类别：`health`, `bearing_ball_H/L`, `bearing_inner_H/L`, `bearing_outer_H/L`, `bearing_outer_H_and_inner_H`, `bend`, `broken_bar`, `dynamic_eccentricity`, `static_eccentricity_H/L`, `voltage_unbalance_L`, `winding_H/L` 及复合故障。
+- 工况：仅使用 `torque_circulation` 文件，截取负载 max 的稳定平台 15-25s 和 65-75s；转速 `1000/2000/3000rpm` 与负载 `20/40Nm`。
+
+### `MFPT`
+
+- 使用通道：`bearing` 结构中的振动信号。
+
+### `PU`
+
+- 使用通道：`Y` 结构中的振动信号。
+- 类别：`K001`, `KA04`, `KA15`, `KA16`, `KA22`, `KA30`, `KB23`, `KB24`, `KB27`, `KI14`, `KI16`, `KI17`, `KI18`, `KI21`。
+- 工况：`N15_M07_F10`, `N09_M07_F10`, `N15_M01_F10`, `N15_M07_F04`。
+
+### `SDUST_Bearing`
+
+- 使用通道：`Signal.y_values.values` 全部 6 通道。
+- 类别：`NC`, `IF0.2`, `IF0.4`, `IF0.6`, `OF0.2`, `OF0.4`, `OF0.6`, `RF0.2`, `RF0.4`, `RF0.6`。
+- 工况：固定转速 `1000`, `1500`, `1800`, `2000`, `2500`, `3000` rpm，且仅保留负载 `60` N；忽略 `1797`、`800~1500`、`1000-2000` 等数据。
+
+### `SDUST_Gear`
+
+- 使用通道：`Signal.y_values.values` 全部 6 通道。
+- 类别：`NC`, `太阳断裂`, `太阳点蚀`, `太阳磨损`, `行星断裂`, `行星点蚀`, `行星磨损`。
+- 工况：固定转速 `1000`, `1500`, `1800`, `2000`, `2500` rpm，且仅保留负载 `0.5A` 的第 `1` 次采集；忽略 `0-0.2A`, `0-0.35A`, `0-0.5A` 和 `flu` 波动工况。
+
+### `SEU_Bearing`
+
+- 使用通道：第 2、3、4 通道。
+- 类别：`health`, `ball`, `inner`, `outer`, `comb`。
+- 工况：`20_0`, `30_2`。
+
+### `SEU_Gear`
+
+- 使用通道：第 2、3、4 通道。
+- 类别：`health`, `chipped`, `miss`, `root`, `surface`。
+- 工况：`20_0`, `30_2`。
+
+### `TORINO`
+
+- 使用通道：`.mat` 中全部 6 个通道。
+
+### `UO (Ottawa)`
+
+- 使用通道：`Channel_1`。
+
+### `WT`
+
+- 使用通道：`Data` 前 2 通道，即 x/y 振动通道；仅取 70-90s。
+- 类别：`healthy`, `broken`, `missing_tooth`, `root_crack`, `wear`。
+- 工况：`.MAT` 文件名下划线后的条件值，如 `20`, `25`, `30`, `35`, `40`, `45`, `50`, `55`；当前仅使用每类 `1/` 文件夹。
+
+### `XJTUSY`
+
+- 使用通道：`Horizontal_vibration_signals`, `Vertical_vibration_signals`。
+
+</details>
 
 ## 环境依赖
 
