@@ -60,6 +60,7 @@ DATASET_CONFIG = {
 - `HUST_Motor` 是 finetune 数据集，兼容用户输入 `HIT_Motor` 别名；读取 `Raw_data/Finetune/HUST_Motor/Raw data/*.txt` 文本表。采样频率 25600 Hz，读取 4 个数据通道：x/y/z 振动通道和最后一个 `Sound` 声学通道。类别由文件名前缀决定，工况由转速字段决定。
 - `JNU` 是 finetune 数据集，文件名前缀映射为 `n -> 0`、`ib -> 1`、`ob -> 2`、`tb -> 3`，工况按文件名中的 `600/800/1000` 分组。
 - `MCC5-THU-Gearbox` 是 finetune 齿轮箱数据集，模块名为 `MCC5_THU_Gearbox`，原始目录仍为 `Raw_data/Finetune/MCC5`；采样频率 12800 Hz；只读取 `*_torque_circulation_*.csv`，忽略 `speed_circulation`。每个 CSV 只截取 10-20s 和 40-50s 两段固定工况数据，读取最后 3 列 `gearbox_vibration_x/y/z`。类别由文件名中 `_torque_circulation_` 前的故障名决定，工况由 `rpm` 和 `Nm` 字段决定。
+- `MCC5-THU-Motor` 是 finetune 电机数据集，模块名为 `MCC5_THU_Motor`，原始目录为 `Raw_data/Finetune/MCC5-THU_Motor/MCC5-THU Motor_torque_circulation`；采样频率 12800 Hz；只读取 `torque_circulation` CSV，忽略 `speed_circulation`。CSV 无表头，第 0 列为时间，第 1 列为关键相位信号，第 2 列为负载，第 3-5 列为电机 x/y/z 振动通道。每个 CSV 只截取负载 max 的稳定平台 15-25s 和 65-75s，类别由文件名中 `_torque_circulation_` 前的故障名决定，工况由 `rpm` 和 `Nm` 字段决定。
 - `SEU` 是 finetune 数据集，输出为两个独立目录 `Process_data/Finetune/SEU_Bearing` 和 `Process_data/Finetune/SEU_Gear`；采样频率 5120 Hz，原始 8 通道，仅读取第 2、3、4 通道。
 - `SDUST_Bearing` 是 finetune 数据集，读取 `Raw_data/Finetune/SUDST/轴承数据集` 或 `Raw_data/Finetune/SDUST/轴承数据集`；采样频率 25600 Hz，读取 `Signal.y_values.values` 全部 6 通道。只保留固定转速、负载 `60` N 的数据，排除 `1797` 和所有变转速文件。
 - `SDUST_Gear` 是 finetune 数据集，读取 `Raw_data/Finetune/SUDST/齿轮数据集` 或 `Raw_data/Finetune/SDUST/齿轮数据集`；采样频率 25600 Hz，读取 `Signal.y_values.values` 全部 6 通道。只保留固定转速、负载 `0.5A`、第 `1` 次采集的数据，排除 `0-0.2A`、`0-0.35A`、`0-0.5A` 和 `flu` 波动工况。

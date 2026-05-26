@@ -15,50 +15,50 @@ from data_scripts.fewshot import (
 
 
 DATASET_CONFIG = {
-    "target": "MCC5THUGearboxFinetuneProcessor",
+    "target": "MCC5THUMotorFinetuneProcessor",
     "method": "prepare_dataset",
     "task": "finetune",
-    "raw_folders": ("MCC5", "MCC5-THU_Gearbox"),
-    "save_folder": "MCC5-THU-Gearbox",
+    "raw_folders": ("MCC5-THU_Motor/MCC5-THU Motor_torque_circulation",),
+    "save_folder": "MCC5-THU-Motor",
 }
 
 
 LABEL_MAP = {
     "health": 0,
-    "gear_pitting_H": 1,
-    "gear_pitting_M": 2,
-    "gear_pitting_L": 3,
-    "gear_wear_H": 4,
-    "gear_wear_M": 5,
-    "gear_wear_L": 6,
-    "miss_teeth": 7,
-    "teeth_break_H": 8,
-    "teeth_break_M": 9,
-    "teeth_break_L": 10,
-    "teeth_crack_H": 11,
-    "teeth_crack_M": 12,
-    "teeth_crack_L": 13,
-    "teeth_break_and_bearing_inner_H": 14,
-    "teeth_break_and_bearing_inner_M": 15,
-    "teeth_break_and_bearing_inner_L": 16,
-    "teeth_break_and_bearing_outer_H": 17,
-    "teeth_break_and_bearing_outer_M": 18,
-    "teeth_break_and_bearing_outer_L": 19,
+    "bearing_ball_H": 1,
+    "bearing_ball_L": 2,
+    "bearing_inner_H": 3,
+    "bearing_inner_L": 4,
+    "bearing_outer_H": 5,
+    "bearing_outer_L": 6,
+    "bearing_outer_H_and_inner_H": 7,
+    "bend": 8,
+    "broken_bar": 9,
+    "broken_bar_and_bearing_inner_H": 10,
+    "broken_bar_and_bearing_outer_H": 11,
+    "dynamic_eccentricity": 12,
+    "dynamic_eccentricity_and_bearing_inner_H": 13,
+    "dynamic_eccentricity_and_bearing_outer_H": 14,
+    "static_eccentricity_H": 15,
+    "static_eccentricity_L": 16,
+    "static_eccentricity_H_and_bearing_inner_H": 17,
+    "static_eccentricity_H_and_bearing_outer_H": 18,
+    "voltage_unbalance_L": 19,
+    "winding_H": 20,
+    "winding_L": 21,
+    "winding_H_and_bearing_inner_H": 22,
+    "winding_H_and_bearing_outer_H": 23,
 }
 
 
 FILE_PATTERN = re.compile(
-    r"(?P<label>.+)_torque_circulation_(?P<rpm>\d+)rpm_(?P<torque>\d+)Nm$"
+    r"(?P<label>.+)_torque_circulation_(?P<torque>\d+)Nm_(?P<rpm>\d+)rpm_.+"
 )
-SEGMENTS_SEC = ((10, 20), (40, 50))
-GEARBOX_COLUMNS = (
-    "gearbox_vibration_x",
-    "gearbox_vibration_y",
-    "gearbox_vibration_z",
-)
+SEGMENTS_SEC = ((15, 25), (65, 75))
+MOTOR_VIBRATION_COLUMNS = (3, 4, 5)
 
 
-class MCC5THUGearboxFinetuneProcessor:
+class MCC5THUMotorFinetuneProcessor:
     def __init__(
         self,
         raw_dir=None,
@@ -155,7 +155,7 @@ class MCC5THUGearboxFinetuneProcessor:
 
     def load_samples(self):
         if not self.raw_dir.exists():
-            raise FileNotFoundError(f"MCC5-THU-Gearbox data directory does not exist: {self.raw_dir}")
+            raise FileNotFoundError(f"MCC5-THU-Motor data directory does not exist: {self.raw_dir}")
 
         samples = []
         labels = []
@@ -171,7 +171,7 @@ class MCC5THUGearboxFinetuneProcessor:
             groups.extend([(label_key, condition)] * len(windows))
 
         if not samples:
-            raise RuntimeError(f"No MCC5-THU-Gearbox torque_circulation samples found under {self.raw_dir}")
+            raise RuntimeError(f"No MCC5-THU-Motor torque_circulation samples found under {self.raw_dir}")
 
         return (
             np.concatenate(samples, axis=0).astype(np.float32),
@@ -183,10 +183,10 @@ class MCC5THUGearboxFinetuneProcessor:
 def parse_mcc5_filename(file_stem):
     match = FILE_PATTERN.fullmatch(file_stem)
     if match is None:
-        raise ValueError(f"Cannot infer MCC5-THU-Gearbox label/condition from {file_stem}")
+        raise ValueError(f"Cannot infer MCC5-THU-Motor label/condition from {file_stem}")
     label_key = match.group("label")
     if label_key not in LABEL_MAP:
-        raise ValueError(f"Unknown MCC5-THU-Gearbox label code: {label_key}")
+        raise ValueError(f"Unknown MCC5-THU-Motor label code: {label_key}")
     condition = f"{match.group('rpm')}rpm_{match.group('torque')}Nm"
     return label_key, condition
 
@@ -198,13 +198,14 @@ def read_mcc5_signal(path, sampling_frequency):
         nrows = int(round((end_sec - start_sec) * sampling_frequency))
         df = pd.read_csv(
             path,
-            usecols=GEARBOX_COLUMNS,
-            skiprows=range(1, start + 1),
+            header=None,
+            usecols=MOTOR_VIBRATION_COLUMNS,
+            skiprows=range(start),
             nrows=nrows,
         )
         data = df.to_numpy(dtype=np.float32, copy=True)
         if len(data) != nrows:
-            raise ValueError(f"MCC5-THU-Gearbox file {path} is shorter than requested {start_sec}-{end_sec}s segment.")
+            raise ValueError(f"MCC5-THU-Motor file {path} is shorter than requested {start_sec}-{end_sec}s segment.")
         segment_arrays.append(data.T)
     return np.concatenate(segment_arrays, axis=1)
 
@@ -312,7 +313,7 @@ def default_save_dir():
 
 
 if __name__ == "__main__":
-    processor = MCC5THUGearboxFinetuneProcessor(
+    processor = MCC5THUMotorFinetuneProcessor(
         norm_method="minmax",
         resampled_size=1024,
     )
