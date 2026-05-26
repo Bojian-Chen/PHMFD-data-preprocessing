@@ -78,33 +78,33 @@ huggingface-cli download bojian1/PHMFD-data \
 
 下表中的采样频率、通道数、使用通道、类别和工况信息以当前 `data_scripts/` 预处理代码为准；来源 link 和 bib 信息未确认时留空，后续可继续补充。为避免 GitHub 表格横向滚动，概览表只保留短字段，长描述放在下方折叠详情中。
 
-| 数据集 | 类型 | 采样频率 | 通道 | 资料 |
-| ------ | ---- | -------- | ---- | ---- |
-| `CNC` | 工业/CNC 加工 | 2 kHz | 3 / 3 | [source](https://github.com/boschresearch/CNC_Machining/tree/main), [bib](https://www.sciencedirect.com/science/article/pii/S2212827122002384) |
-| `CWRU` | 轴承 | 12/48 kHz (使用 12 kHz) | 2 / 2 | [source](https://engineering.case.edu/bearingdatacenter/download-data-file), [bib](https://www.sciencedirect.com/science/article/abs/pii/S0888327015002034) |
-| `FEMTO` | 轴承 | 25.6 kHz | 6 / 2 | [source](https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset), [bib](https://hal.science/hal-00719503/) |
-| `HITSM` | 轴承 | 51.2 kHz | 1 / 1 | [source](https://github.com/hitwzc/Bearing-datasets), [bib](https://iopscience.iop.org/article/10.1088/1361-6501/ac7941/meta) |
-| `HUST_Bearing` | 轴承 | 25.6 kHz | 4 / 3 | [source](https://github.com/CHAOZHAO-1/HUSTbearing-dataset), [bib](https://doi.org/10.1016/j.ress.2024.109964) |
-| `HUST_Gearbox` | 齿轮箱 | 25.6 kHz | 4 / 3 | [source](https://github.com/CHAOZHAO-1/HUSTgearbox-dataset), [bib](https://doi.org/10.1016/j.ress.2024.109964) |
-| `HUST_Motor` | 电机 | 25.6 kHz | 4 / 4 | [source](https://github.com/CHAOZHAO-1/HUSTmotor-multi-modal-dataset), [bib](https://www.sciencedirect.com/science/article/abs/pii/S0952197625025904) |
-| `IMS_FD` | 轴承 | 20.48 kHz | 8 或 4 / 4 | [source](https://data.nasa.gov/dataset/ims-bearings), bib: Rexnord technical services |
-| `JNU` | 轴承 | 50 kHz | 1 / 1 | [source](https://github.com/ClarkGableWang/JNU-Bearing-Dataset), [bib](https://www.mdpi.com/1424-8220/13/6/8013) |
-| `KAIST` | 轴承 | 25.6 kHz | 4 / 4 | [part1](https://data.mendeley.com/datasets/vxkj334rzv/7), [part2](https://data.mendeley.com/datasets/x3vhp8t6hg/7), [part3](https://data.mendeley.com/datasets/j8d8pfkvj2/4), [bib](https://www.sciencedirect.com/science/article/pii/S2352340923001671) |
-| `MCC5-THU-Gearbox` | 齿轮箱 | 12.8 kHz | 8 / 3 | [source](https://github.com/liuzy0708/MCC5-THU-Gearbox-Benchmark-Datasets), [bib](https://www.sciencedirect.com/science/article/pii/S2352340924004220) |
-| `MCC5-THU-Motor` | 电机 | 12.8 kHz | 8 / 3 | [source](https://github.com/liuzy0708/MCC5-THU-Motor-Benchmark-Datasets), [bib](https://www.sciencedirect.com/science/article/pii/S2352340926001368) |
-| `MFPT` | 轴承 | 97656/48828 Hz | 1 / 1 | [source](https://www.mfpt.org/fault-data-sets/), [bib](https://www.sciencedirect.com/science/article/abs/pii/S0888327022005714) |
-| `PU` | 轴承 | 64 kHz | 1 / 1 | [source](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter), [bib](http://www.papers.phmsociety.org/index.php/phme/article/view/1577) |
-| `SDUST_Bearing` | 轴承 | 25.6 kHz | 6 / 6 | [source](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main), [bib](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X) |
-| `SDUST_Gear` | 齿轮箱 | 25.6 kHz | 6 / 6 | [source](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main), [bib](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X) |
-| `SEU_Bearing` | 轴承 | 5.12 kHz | 8 / 3 | [source](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox), [bib](https://ieeexplore.ieee.org/abstract/document/8432110) |
-| `SEU_Gear` | 齿轮 | 5.12 kHz | 8 / 3 | [source](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox), [bib](https://ieeexplore.ieee.org/abstract/document/8432110) |
-| `TORINO` | 轴承 | 51.2 kHz | 6 / 6 | [bib](https://www.sciencedirect.com/science/article/abs/pii/S0888327018306800) |
-| `UO (Ottawa)` | 轴承 | 200 kHz | 2 / 1 | [source](https://data.mendeley.com/datasets/v43hmbwxpm/1), [bib](https://www.sciencedirect.com/science/article/pii/S2352340918314124?via%3Dihub) |
-| `WT` | 齿轮/传动系统 | 48 kHz | 4 / 2 | [source](https://github.com/Liudd-BJUT/WT-planetary-gearbox-dataset), [bib](https://iopscience.iop.org/article/10.1088/1361-6501/acf390) |
-| `XJTUSY` | 轴承 | 25.6 kHz | 2 / 2 | [source](http://biaowang.tech/xjtu-sy-bearing-datasets/), [bib](https://ieeexplore.ieee.org/document/8576668) |
+| 数据集 | 类型 | 采样频率 | 通道 | 来源 link | 引用文献 bib |
+| ------ | ---- | -------- | ---- | --------- | ------------ |
+| `CNC` | 工业/CNC 加工 | 2 kHz | 3 / 3 | [Github](https://github.com/boschresearch/CNC_Machining/tree/main) | [Ref](https://www.sciencedirect.com/science/article/pii/S2212827122002384) |
+| `CWRU` | 轴承 | 12/48 kHz (使用 12 kHz) | 2 / 2 | [CWRU Bearing Data Center](https://engineering.case.edu/bearingdatacenter/download-data-file) | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327015002034) |
+| `FEMTO` | 轴承 | 25.6 kHz | 6 / 2 | [Github](https://github.com/Lucky-Loek/ieee-phm-2012-data-challenge-dataset) | [Ref](https://hal.science/hal-00719503/) |
+| `HITSM` | 轴承 | 51.2 kHz | 1 / 1 | [Github](https://github.com/hitwzc/Bearing-datasets) | [MST](https://iopscience.iop.org/article/10.1088/1361-6501/ac7941/meta) |
+| `HUST_Bearing` | 轴承 | 25.6 kHz | 4 / 3 | [Github](https://github.com/CHAOZHAO-1/HUSTbearing-dataset) | [Zhao2024](https://doi.org/10.1016/j.ress.2024.109964) |
+| `HUST_Gearbox` | 齿轮箱 | 25.6 kHz | 4 / 3 | [Github](https://github.com/CHAOZHAO-1/HUSTgearbox-dataset) | [Zhao2024](https://doi.org/10.1016/j.ress.2024.109964) |
+| `HUST_Motor` | 电机 | 25.6 kHz | 4 / 4 | [Github](https://github.com/CHAOZHAO-1/HUSTmotor-multi-modal-dataset) | [EAAI](https://www.sciencedirect.com/science/article/abs/pii/S0952197625025904) |
+| `IMS_FD` | 轴承 | 20.48 kHz | 8 或 4 / 4 | [NASA IMS Bearings](https://data.nasa.gov/dataset/ims-bearings) | Rexnord technical services: Bearing data set |
+| `JNU` | 轴承 | 50 kHz | 1 / 1 | [Github](https://github.com/ClarkGableWang/JNU-Bearing-Dataset) | [Sensors](https://www.mdpi.com/1424-8220/13/6/8013) |
+| `KAIST` | 轴承 | 25.6 kHz | 4 / 4 | [Part1](https://data.mendeley.com/datasets/vxkj334rzv/7) [Part2](https://data.mendeley.com/datasets/x3vhp8t6hg/7) [Part3](https://data.mendeley.com/datasets/j8d8pfkvj2/4) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340923001671) |
+| `MCC5-THU-Gearbox` | 齿轮箱 | 12.8 kHz | 8 / 3 | [Github](https://github.com/liuzy0708/MCC5-THU-Gearbox-Benchmark-Datasets) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340924004220) |
+| `MCC5-THU-Motor` | 电机 | 12.8 kHz | 8 / 3 | [Github](https://github.com/liuzy0708/MCC5-THU-Motor-Benchmark-Datasets) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340926001368) |
+| `MFPT` | 轴承 | 97656/48828 Hz | 1 / 1 | [MFPT Fault Data Sets](https://www.mfpt.org/fault-data-sets/) | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327022005714) |
+| `PU` | 轴承 | 64 kHz | 1 / 1 | [Paderborn Bearing DataCenter](https://mb.uni-paderborn.de/en/kat/research/bearing-datacenter) | [PHM Society](http://www.papers.phmsociety.org/index.php/phme/article/view/1577) |
+| `SDUST_Bearing` | 轴承 | 25.6 kHz | 6 / 6 | [Github](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main) | [KBS](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X) |
+| `SDUST_Gear` | 齿轮箱 | 25.6 kHz | 6 / 6 | [Github](https://github.com/JRWang-SDUST/SDUST-Dataset/tree/main) | [KBS](https://www.sciencedirect.com/science/article/abs/pii/S095070512301033X) |
+| `SEU_Bearing` | 轴承 | 5.12 kHz | 8 / 3 | [Github](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox) | [TII](https://ieeexplore.ieee.org/abstract/document/8432110) |
+| `SEU_Gear` | 齿轮 | 5.12 kHz | 8 / 3 | [Github](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox) | [TII](https://ieeexplore.ieee.org/abstract/document/8432110) |
+| `TORINO` | 轴承 | 51.2 kHz | 6 / 6 |  | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327018306800) |
+| `UO (Ottawa)` | 轴承 | 200 kHz | 2 / 1 | [Mendeley Data](https://data.mendeley.com/datasets/v43hmbwxpm/1) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340918314124?via%3Dihub) |
+| `WT` | 齿轮/传动系统 | 48 kHz | 4 / 2 | [Github](https://github.com/Liudd-BJUT/WT-planetary-gearbox-dataset) | [MST](https://iopscience.iop.org/article/10.1088/1361-6501/acf390) |
+| `XJTUSY` | 轴承 | 25.6 kHz | 2 / 2 | [XJTU-SY Bearing Datasets](http://biaowang.tech/xjtu-sy-bearing-datasets/) | [TR](https://ieeexplore.ieee.org/document/8576668) |
 
 <details>
-<summary>展开使用通道、类别和工况详情</summary>
+<summary>具体使用通道、类别和工况详情</summary>
 
 ### `CNC`
 
