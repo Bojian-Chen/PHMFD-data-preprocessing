@@ -96,6 +96,7 @@ class PreparePaderborn:
             )
             split_samples = samples[indices]
             split_labels = labels[indices]
+            split_groups = [groups[int(idx)] for idx in indices]
             split_samples = normalize_per_sample(split_samples, self.norm_method)
             split_samples = maybe_resample(split_samples, self.resampled_size)
             split_shape = tuple(split_samples.shape)
@@ -104,6 +105,7 @@ class PreparePaderborn:
                 split_labels,
                 self.dataset_name,
                 self.save_dir / f"{split_name}.parquet",
+                split_groups,
             )
             print(f"{self.dataset_name}: saved {split_name}={split_shape} to {self.save_dir}")
             return
@@ -121,6 +123,7 @@ class PreparePaderborn:
         for split_name, indices in split_indices.items():
             split_samples = samples[indices]
             split_labels = labels[indices]
+            split_groups = [groups[int(idx)] for idx in indices]
             split_samples = normalize_per_sample(split_samples, self.norm_method)
             split_samples = maybe_resample(split_samples, self.resampled_size)
             split_shapes[split_name] = tuple(split_samples.shape)
@@ -129,6 +132,7 @@ class PreparePaderborn:
                 split_labels,
                 self.dataset_name,
                 self.save_dir / f"{split_name}.parquet",
+                split_groups,
             )
 
         shapes = ", ".join(
@@ -293,16 +297,17 @@ def maybe_resample(samples, resampled_size):
     return scipy_resample(samples, int(resampled_size), axis=-1).astype(np.float32)
 
 
-def save_parquet(samples, labels, dataset_name, save_path):
+def save_parquet(samples, labels, dataset_name, save_path, groups=None):
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    df = pd.DataFrame(
-        {
-            "samples": samples.tolist(),
-            "labels": labels.astype(np.int64).tolist(),
-            "dataset": [dataset_name] * len(samples),
-        }
-    )
+    data = {
+        "samples": samples.tolist(),
+        "labels": labels.astype(np.int64).tolist(),
+        "dataset": [dataset_name] * len(samples),
+    }
+    if groups is not None:
+        data["group"] = [repr(group) for group in groups]
+    df = pd.DataFrame(data)
     pq.write_table(pa.Table.from_pandas(df), save_path)
 
 

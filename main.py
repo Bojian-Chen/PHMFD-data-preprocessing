@@ -1,19 +1,25 @@
 import argparse
+import ast
+import json
 import inspect
+from collections import Counter
 from importlib import import_module
 from pathlib import Path
+
+import pyarrow.parquet as pq
 
 from data_scripts import DATASET_ALIASES, DATASET_MODULES
 
 
 DEFAULT_RAW_ROOT = Path("Raw_data")
-DEFAULT_SAVE_ROOT = Path("Process_data")
-DEFAULT_SAMPLE_TIME = 0.1
+DEFAULT_SAVE_ROOT = Path("Process_data_02s")
+DEFAULT_SAMPLE_TIME = 0.2
 DEFAULT_NORM_METHOD = "none"
 DEFAULT_RESAMPLED_SIZE = None
 DEFAULT_SEED = 42
 DEFAULT_FEWSHOT_SEED = 42
 RESAMPLED_SIZE_SENTINEL = "__default__"
+SKIP_DATASETS_FOR_ALL = {"FEMTO"}
 
 COMMON_PARAM_ALIASES = {
     "raw_path": ("raw_dir", "data_dir", "data_root", "raw_root"),
@@ -78,7 +84,7 @@ def dataset_raw_roots(args, config):
 
 
 def dataset_save_path(args, config):
-    save_root = Path(args.save_root) / task_folder(config)
+    save_root = Path(args.save_root)
     save_folder = config.get("save_folder")
     if save_folder:
         return save_root / save_folder
@@ -154,9 +160,109 @@ def run_dataset(dataset_name, args):
     return getattr(dataset, config["method"])()
 
 
+def split_name_from_path(path):
+    return path.stem
+
+
+def parse_group_condition(group_value):
+    try:
+        parsed = ast.literal_eval(str(group_value))
+    except (SyntaxError, ValueError):
+        return str(group_value)
+    if isinstance(parsed, tuple) and len(parsed) >= 2:
+        return repr(parsed[-1])
+    return repr(parsed)
+
+
+def counter_json(values):
+    counter = Counter(str(value) for value in values)
+    return json.dumps(dict(sorted(counter.items())), ensure_ascii=False)
+
+
+def first_sample_shape(path):
+    try:
+        pf = pq.ParquetFile(path)
+        batch_iter = pf.iter_batches(batch_size=1, columns=["samples"])
+        batch = next(batch_iter, None)
+    except Exception:
+        return None
+    if batch is None or batch.num_rows == 0:
+        return None
+    sample = batch.column(0)[0].as_py()
+    shape = []
+    while isinstance(sample, list):
+        shape.append(len(sample))
+        sample = sample[0] if sample else None
+    return tuple(shape)
+
+
+def summarize_parquet_file(path, save_root):
+    pf = pq.ParquetFile(path)
+    columns = set(pf.schema_arrow.names)
+    split_name = split_name_from_path(path)
+    relative_path = path.relative_to(save_root)
+
+    dataset_values = []
+    if "dataset" in columns:
+        dataset_values = pq.read_table(path, columns=["dataset"])["dataset"].to_pylist()
+    dataset_names = sorted({str(value) for value in dataset_values})
+    dataset_name = dataset_names[0] if len(dataset_names) == 1 else str(relative_path.parent)
+
+    labels = []
+    if "labels" in columns:
+        labels = pq.read_table(path, columns=["labels"])["labels"].to_pylist()
+
+    groups = []
+    conditions = []
+    if "group" in columns:
+        groups = pq.read_table(path, columns=["group"])["group"].to_pylist()
+        conditions = [parse_group_condition(group) for group in groups]
+
+    is_train_1p = split_name == "train_1p"
+    return {
+        "dataset": dataset_name,
+        "output_dir": str(relative_path.parent),
+        "split": split_name,
+        "path": str(path),
+        "rows": pf.metadata.num_rows,
+        "sample_shape": first_sample_shape(path),
+        "has_labels": "labels" in columns,
+        "label_count": len(set(labels)) if labels else 0,
+        "label_distribution": counter_json(labels) if labels else "{}",
+        "has_group": "group" in columns,
+        "group_count": len(set(groups)) if groups else 0,
+        "condition_count": len(set(conditions)) if conditions else 0,
+        "condition_distribution": counter_json(conditions) if conditions else "{}",
+        "train_1p_condition_count": len(set(conditions)) if is_train_1p and conditions else "",
+        "train_1p_group_count": len(set(groups)) if is_train_1p and groups else "",
+    }
+
+
+def write_process_data_summary(save_root):
+    save_root = Path(save_root)
+    rows = [
+        summarize_parquet_file(path, save_root)
+        for path in sorted(save_root.rglob("*.parquet"))
+    ]
+    if not rows:
+        print(f"No parquet files found under {save_root}; skipped summary CSV.")
+        return None
+
+    import pandas as pd
+
+    summary_path = save_root / "process_data_build_summary.csv"
+    pd.DataFrame(rows).to_csv(summary_path, index=False)
+    print(f"Saved process data summary CSV: {summary_path}")
+    return summary_path
+
+
 def normalize_dataset_names(dataset_names):
     if any(name.lower() == "all" for name in dataset_names):
-        return list(DATASET_MODULES)
+        return [
+            dataset_name
+            for dataset_name in DATASET_MODULES
+            if dataset_name not in SKIP_DATASETS_FOR_ALL
+        ]
 
     normalized = []
     aliases = {name.lower(): name for name in DATASET_MODULES}
@@ -250,6 +356,8 @@ def main():
                 raise
             print(f"{dataset_name} failed: {exc}")
             failures.append((dataset_name, exc))
+
+    write_process_data_summary(args.save_root)
 
     if failures:
         failed_names = ", ".join(dataset_name for dataset_name, _ in failures)
