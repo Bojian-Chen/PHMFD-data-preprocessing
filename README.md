@@ -83,6 +83,24 @@ huggingface-cli download bojian1/PHMFD-data \
 | `UO` | 轴承 | 200 kHz | 2 | `Channel_1` |  |  |
 | `XJTUSY` | 轴承 | 25.6 kHz | 2 | `Horizontal_vibration_signals`, `Vertical_vibration_signals` | [XJTU-SY Bearing Datasets](http://biaowang.tech/xjtu-sy-bearing-datasets/) |  |
 
+## 使用的故障类
+
+下表按当前 `data_scripts/` 实际读取的文件、目录或轴承编号整理。轴承数据集统一使用“内圈故障、外圈故障、滚子故障、保持架故障”的表述；原始数据中的 `ball` 统一记为“滚子故障”，`cage` 统一记为“保持架故障”。同一部位的不同损伤尺寸、严重程度或轴承编号在本表中按不同故障类列出。部分 pretrain 脚本只把这些类别的数据混合用于预训练，输出 Parquet 不一定保留 `labels` 字段。
+
+| 数据集 | 代码使用的故障类 |
+| --- | --- |
+| `CNC` | `good`、`bad`；非轴承数据，不转换为内圈/外圈/滚子故障。 |
+| `CWRU` | 正常；内圈故障 0.007 inch、0.014 inch、0.021 inch；滚子故障 0.007 inch、0.014 inch、0.021 inch；外圈故障 0.007 inch、0.014 inch、0.021 inch。对应文件组分别为正常 `97`-`100`，内圈 `105`-`108`、`169`-`172`、`209`-`212`，滚子 `118`-`121`、`185`-`188`、`222`-`225`，外圈 `130`-`133`、`197`-`200`、`234`-`237`。 |
+| `FEMTO` | 代码使用 `Bearing1_1`-`Bearing1_7`、`Bearing2_1`-`Bearing2_7`、`Bearing3_1`-`Bearing3_3` 的全寿命退化数据；原始挑战数据没有给每个轴承固定的内圈/外圈/滚子/保持架标签，且可能同时包含滚子、内外圈和保持架退化，因此这里按“自然退化轴承实例”使用，不拆成单一故障部位类。 |
+| `HITSM` | 正常；内圈故障 `IR2`、`IR5`、`IR8`；外圈故障 `OR2`、`OR5`、`OR8`。其中 `2`、`5`、`8` 表示故障区域圆心角尺寸，三个转速 `600`、`900`、`1200` rpm 不是故障类。`HITSM_self_built` 和 `HITSM_SpectraQuest` 使用同一套故障类。 |
+| `IMS_FD` | 正常 `bearing1_1`；内圈故障 `bearing1_3`；滚子故障 `bearing1_4`；外圈故障 `bearing2_1`。 |
+| `KAIST` | 正常；滚子故障；内圈故障；外圈故障。代码读取 `vibration_normal_*`、`vibration_ball_*`、`vibration_inner_*`、`vibration_outer_*`；`KAIST1`、`KAIST2`、`KAIST3` 只对应不同 CSV 子集。 |
+| `MFPT` | 正常；外圈故障 `OuterRaceFault_1`-`OuterRaceFault_3`、`OuterRaceFault_vload_1`-`OuterRaceFault_vload_7`；内圈故障 `InnerRaceFault_vload_1`-`InnerRaceFault_vload_7`。 |
+| `PU` | 正常 `K001`；外圈故障 `KA04` 2 x 3 mm、`KA15` <1 x <1 mm、`KA16` 2 x total mm 和 3 x total mm、`KA22` <2 x 1 mm、`KA30` <1 x <1 mm；内圈故障 `KI16` 6 x total mm、`KI17` 1 x 2 mm 两处、`KI18` 2.5 x total mm、`KI21` 1 x 2 mm；内圈+外圈复合故障 `KB23`、`KB24`、`KB27`、`KI14`。代码按这些轴承编号分别赋 label，因此不同编号保留为不同类。 |
+| `TORINO` | 正常 `C0A`；内圈故障 `C1A` 450 um、`C2A` 250 um、`C3A` 150 um；滚子故障 `C4A` 450 um、`C5A` 250 um、`C6A` 150 um。代码只使用 `C0A`-`C6A` 文件，不使用 `E4A` endurance 文件。 |
+| `UO` | 正常 `healthy`；内圈故障 `inner`；外圈故障 `outer`；滚子故障 `ball`；复合故障 `combination`。 |
+| `XJTUSY` | 外圈故障 `Bearing1_1`、`Bearing1_2`、`Bearing1_3`、`Bearing2_2`、`Bearing2_4`、`Bearing2_5`、`Bearing3_1`、`Bearing3_5`；内圈故障 `Bearing2_1`、`Bearing3_3`、`Bearing3_4`；保持架故障 `Bearing1_4`、`Bearing2_3`；内圈+外圈复合故障 `Bearing1_5`；内圈+外圈+滚子+保持架复合故障 `Bearing3_2`。 |
+
 ## 环境依赖
 
 建议使用 Python 3.10+。
