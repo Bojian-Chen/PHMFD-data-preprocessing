@@ -99,7 +99,7 @@ huggingface-cli download bojian1/PHMFD-data \
 | `SEU_Bearing` | 轴承 | 5.12 kHz | 8 / 3 | [Github](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox) | [TII](https://ieeexplore.ieee.org/abstract/document/8432110) |
 | `SEU_Gear` | 齿轮 | 5.12 kHz | 8 / 3 | [Github](https://github.com/cathysiyu/Mechanical-datasets/tree/master/gearbox) | [TII](https://ieeexplore.ieee.org/abstract/document/8432110) |
 | `TORINO` | 轴承 | 51.2 kHz | 6 / 6 |  | [MSSP](https://www.sciencedirect.com/science/article/abs/pii/S0888327018306800) |
-| `UO (Ottawa)` | 轴承 | 200 kHz | 2 / 1 | [Mendeley Data](https://data.mendeley.com/datasets/v43hmbwxpm/1) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340918314124?via%3Dihub) |
+| `UO (Ottawa)` | 轴承 | 200 kHz | 2 / 1 | [Mendeley Data](https://data.mendeley.com/datasets/v43hmbwxpm/2) | [Data_in_brief](https://www.sciencedirect.com/science/article/pii/S2352340918314124?via%3Dihub) |
 | `WT` | 齿轮/传动系统 | 48 kHz | 4 / 2 | [Github](https://github.com/Liudd-BJUT/WT-planetary-gearbox-dataset) | [MST](https://iopscience.iop.org/article/10.1088/1361-6501/acf390) |
 | `XJTUSY` | 轴承 | 25.6 kHz | 2 / 2 | [XJTU-SY Bearing Datasets](http://biaowang.tech/xjtu-sy-bearing-datasets/) | [TR](https://ieeexplore.ieee.org/document/8576668) |
 
