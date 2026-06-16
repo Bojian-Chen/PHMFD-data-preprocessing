@@ -85,21 +85,39 @@ huggingface-cli download bojian1/PHMFD-data \
 
 ## 使用的故障类
 
-下表按当前 `data_scripts/` 实际读取的文件、目录或轴承编号整理。轴承数据集统一使用“内圈故障、外圈故障、滚子故障、保持架故障”的表述；原始数据中的 `ball` 统一记为“滚子故障”，`cage` 统一记为“保持架故障”。同一部位的不同损伤尺寸、严重程度或轴承编号在本表中按不同故障类列出。部分 pretrain 脚本只把这些类别的数据混合用于预训练，输出 Parquet 不一定保留 `labels` 字段。
+下表按当前 `data_scripts/` 实际读取的文件、目录或轴承编号整理。轴承数据集统一使用“内圈故障、外圈故障、滚子故障、保持架故障”的表述；原始数据中的 `ball` 统一记为“滚子故障”，`cage` 统一记为“保持架故障”。同一部位的不同损伤尺寸、严重程度或轴承编号在本表中按不同故障类列出。部分 pretrain 脚本只把这些类别的数据混合用于预训练，输出 Parquet 不一定保留 `labels` 字段。缩写中 `N` 表示正常，`IR` 表示内圈故障，`OR` 表示外圈故障，`RE` 表示滚子故障，`CA` 表示保持架故障，`MIX` 表示复合故障。
 
-| 数据集 | 代码使用的故障类 |
-| --- | --- |
-| `CNC` | `good`、`bad`；非轴承数据，不转换为内圈/外圈/滚子故障。 |
-| `CWRU` | 正常；内圈故障 0.007 inch、0.014 inch、0.021 inch；滚子故障 0.007 inch、0.014 inch、0.021 inch；外圈故障 0.007 inch、0.014 inch、0.021 inch。对应文件组分别为正常 `97`-`100`，内圈 `105`-`108`、`169`-`172`、`209`-`212`，滚子 `118`-`121`、`185`-`188`、`222`-`225`，外圈 `130`-`133`、`197`-`200`、`234`-`237`。 |
-| `FEMTO` | 代码使用 `Bearing1_1`-`Bearing1_7`、`Bearing2_1`-`Bearing2_7`、`Bearing3_1`-`Bearing3_3` 的全寿命退化数据；原始挑战数据没有给每个轴承固定的内圈/外圈/滚子/保持架标签，且可能同时包含滚子、内外圈和保持架退化，因此这里按“自然退化轴承实例”使用，不拆成单一故障部位类。 |
-| `HITSM` | 正常；内圈故障 `IR2`、`IR5`、`IR8`；外圈故障 `OR2`、`OR5`、`OR8`。其中 `2`、`5`、`8` 表示故障区域圆心角尺寸，三个转速 `600`、`900`、`1200` rpm 不是故障类。`HITSM_self_built` 和 `HITSM_SpectraQuest` 使用同一套故障类。 |
-| `IMS_FD` | 正常 `bearing1_1`；内圈故障 `bearing1_3`；滚子故障 `bearing1_4`；外圈故障 `bearing2_1`。 |
-| `KAIST` | 正常；滚子故障；内圈故障；外圈故障。代码读取 `vibration_normal_*`、`vibration_ball_*`、`vibration_inner_*`、`vibration_outer_*`；`KAIST1`、`KAIST2`、`KAIST3` 只对应不同 CSV 子集。 |
-| `MFPT` | 正常；外圈故障 `OuterRaceFault_1`-`OuterRaceFault_3`、`OuterRaceFault_vload_1`-`OuterRaceFault_vload_7`；内圈故障 `InnerRaceFault_vload_1`-`InnerRaceFault_vload_7`。 |
-| `PU` | 正常 `K001`；外圈故障 `KA04` 2 x 3 mm、`KA15` <1 x <1 mm、`KA16` 2 x total mm 和 3 x total mm、`KA22` <2 x 1 mm、`KA30` <1 x <1 mm；内圈故障 `KI16` 6 x total mm、`KI17` 1 x 2 mm 两处、`KI18` 2.5 x total mm、`KI21` 1 x 2 mm；内圈+外圈复合故障 `KB23`、`KB24`、`KB27`、`KI14`。代码按这些轴承编号分别赋 label，因此不同编号保留为不同类。 |
-| `TORINO` | 正常 `C0A`；内圈故障 `C1A` 450 um、`C2A` 250 um、`C3A` 150 um；滚子故障 `C4A` 450 um、`C5A` 250 um、`C6A` 150 um。代码只使用 `C0A`-`C6A` 文件，不使用 `E4A` endurance 文件。 |
-| `UO` | 正常 `healthy`；内圈故障 `inner`；外圈故障 `outer`；滚子故障 `ball`；复合故障 `combination`。 |
-| `XJTUSY` | 外圈故障 `Bearing1_1`、`Bearing1_2`、`Bearing1_3`、`Bearing2_2`、`Bearing2_4`、`Bearing2_5`、`Bearing3_1`、`Bearing3_5`；内圈故障 `Bearing2_1`、`Bearing3_3`、`Bearing3_4`；保持架故障 `Bearing1_4`、`Bearing2_3`；内圈+外圈复合故障 `Bearing1_5`；内圈+外圈+滚子+保持架复合故障 `Bearing3_2`。 |
+| 数据集 | 缩写总结 | 代码使用的故障类 |
+| --- | --- | --- |
+| `CNC` | `GOOD`, `BAD` | `good`、`bad`；非轴承数据，不转换为内圈/外圈/滚子故障。 |
+| `CWRU` | `N`, `IR007`, `IR014`, `IR021`, `RE007`, `RE014`, `RE021`, `OR007`, `OR014`, `OR021` | 正常；内圈故障 0.007 inch、0.014 inch、0.021 inch；滚子故障 0.007 inch、0.014 inch、0.021 inch；外圈故障 0.007 inch、0.014 inch、0.021 inch。对应文件组分别为正常 `97`-`100`，内圈 `105`-`108`、`169`-`172`、`209`-`212`，滚子 `118`-`121`、`185`-`188`、`222`-`225`，外圈 `130`-`133`、`197`-`200`、`234`-`237`。 |
+| `FEMTO` | `RUN_TO_FAILURE` | 代码使用 `Bearing1_1`-`Bearing1_7`、`Bearing2_1`-`Bearing2_7`、`Bearing3_1`-`Bearing3_3` 的全寿命退化数据；原始挑战数据没有给每个轴承固定的内圈/外圈/滚子/保持架标签，且可能同时包含滚子、内外圈和保持架退化，因此这里按“自然退化轴承实例”使用，不拆成单一故障部位类。 |
+| `HITSM` | `N`, `IR2`, `IR5`, `IR8`, `OR2`, `OR5`, `OR8` | 正常；内圈故障 `IR2`、`IR5`、`IR8`；外圈故障 `OR2`、`OR5`、`OR8`。其中 `2`、`5`、`8` 表示故障区域圆心角尺寸，三个转速 `600`、`900`、`1200` rpm 不是故障类。`HITSM_self_built` 和 `HITSM_SpectraQuest` 使用同一套故障类。 |
+| `IMS_FD` | `N`, `IR`, `RE`, `OR` | 正常 `bearing1_1`；内圈故障 `bearing1_3`；滚子故障 `bearing1_4`；外圈故障 `bearing2_1`。 |
+| `KAIST` | `N`, `RE`, `IR`, `OR` | 正常；滚子故障；内圈故障；外圈故障。代码读取 `vibration_normal_*`、`vibration_ball_*`、`vibration_inner_*`、`vibration_outer_*`；`KAIST1`、`KAIST2`、`KAIST3` 只对应不同 CSV 子集。 |
+| `MFPT` | `N`, `OR1`-`OR3`, `ORv1`-`ORv7`, `IRv1`-`IRv7` | 正常；外圈故障 `OuterRaceFault_1`-`OuterRaceFault_3`、`OuterRaceFault_vload_1`-`OuterRaceFault_vload_7`；内圈故障 `InnerRaceFault_vload_1`-`InnerRaceFault_vload_7`。 |
+| `PU` | `N-K001`, `OR-KA04`, `OR-KA15`, `OR-KA16`, `OR-KA22`, `OR-KA30`, `IR-KI16`, `IR-KI17`, `IR-KI18`, `IR-KI21`, `MIX-KB23`, `MIX-KB24`, `MIX-KB27`, `MIX-KI14` | 正常 `K001`；外圈故障 `KA04` 2 x 3 mm、`KA15` <1 x <1 mm、`KA16` 2 x total mm 和 3 x total mm、`KA22` <2 x 1 mm、`KA30` <1 x <1 mm；内圈故障 `KI16` 6 x total mm、`KI17` 1 x 2 mm 两处、`KI18` 2.5 x total mm、`KI21` 1 x 2 mm；内圈+外圈复合故障 `KB23`、`KB24`、`KB27`、`KI14`。代码按这些轴承编号分别赋 label，因此不同编号保留为不同类。 |
+| `TORINO` | `N`, `IR450`, `IR250`, `IR150`, `RE450`, `RE250`, `RE150` | 正常 `C0A`；内圈故障 `C1A` 450 um、`C2A` 250 um、`C3A` 150 um；滚子故障 `C4A` 450 um、`C5A` 250 um、`C6A` 150 um。代码只使用 `C0A`-`C6A` 文件，不使用 `E4A` endurance 文件。 |
+| `UO` | `N`, `IR`, `OR`, `RE`, `MIX` | 正常 `healthy`；内圈故障 `inner`；外圈故障 `outer`；滚子故障 `ball`；复合故障 `combination`。 |
+| `XJTUSY` | `OR-B1_1`, `OR-B1_2`, `OR-B1_3`, `OR-B2_2`, `OR-B2_4`, `OR-B2_5`, `OR-B3_1`, `OR-B3_5`, `IR-B2_1`, `IR-B3_3`, `IR-B3_4`, `CA-B1_4`, `CA-B2_3`, `MIX-B1_5`, `MIX-B3_2` | 外圈故障 `Bearing1_1`、`Bearing1_2`、`Bearing1_3`、`Bearing2_2`、`Bearing2_4`、`Bearing2_5`、`Bearing3_1`、`Bearing3_5`；内圈故障 `Bearing2_1`、`Bearing3_3`、`Bearing3_4`；保持架故障 `Bearing1_4`、`Bearing2_3`；内圈+外圈复合故障 `Bearing1_5`；内圈+外圈+滚子+保持架复合故障 `Bearing3_2`。 |
+
+### Fault Classes Used
+
+The table below summarizes the files, folders, or bearing IDs actually consumed by `data_scripts/`. Bearing datasets use unified terms: inner-race fault, outer-race fault, rolling-element fault, and cage fault. The original `ball` label is normalized to rolling-element fault, and `cage` is normalized to cage fault. Different damage sizes, severities, or bearing IDs are treated as different fault classes. Some pretrain scripts mix these classes for pretraining and do not necessarily keep a `labels` column in the output Parquet files. In the abbreviation column, `N` means normal, `IR` means inner-race fault, `OR` means outer-race fault, `RE` means rolling-element fault, `CA` means cage fault, and `MIX` means compound fault.
+
+| Dataset | Abbreviation summary | Fault classes used by the code |
+| --- | --- | --- |
+| `CNC` | `GOOD`, `BAD` | `good`, `bad`; this is not a bearing dataset, so its labels are not converted to inner-race, outer-race, rolling-element, or cage faults. |
+| `CWRU` | `N`, `IR007`, `IR014`, `IR021`, `RE007`, `RE014`, `RE021`, `OR007`, `OR014`, `OR021` | Normal; inner-race fault 0.007 inch, 0.014 inch, 0.021 inch; rolling-element fault 0.007 inch, 0.014 inch, 0.021 inch; outer-race fault 0.007 inch, 0.014 inch, 0.021 inch. The corresponding file groups are normal `97`-`100`, inner race `105`-`108`, `169`-`172`, `209`-`212`, rolling element `118`-`121`, `185`-`188`, `222`-`225`, and outer race `130`-`133`, `197`-`200`, `234`-`237`. |
+| `FEMTO` | `RUN_TO_FAILURE` | The code uses full run-to-failure data from `Bearing1_1`-`Bearing1_7`, `Bearing2_1`-`Bearing2_7`, and `Bearing3_1`-`Bearing3_3`. The original challenge data does not assign a fixed inner-race, outer-race, rolling-element, or cage label to each bearing, and degradation may involve rolling elements, races, and cage at the same time. Therefore these data are used as natural degradation bearing instances rather than single-location fault classes. |
+| `HITSM` | `N`, `IR2`, `IR5`, `IR8`, `OR2`, `OR5`, `OR8` | Normal; inner-race faults `IR2`, `IR5`, `IR8`; outer-race faults `OR2`, `OR5`, `OR8`. The numbers `2`, `5`, and `8` denote the angular size of the fault area; speeds `600`, `900`, and `1200` rpm are not fault classes. `HITSM_self_built` and `HITSM_SpectraQuest` use the same fault classes. |
+| `IMS_FD` | `N`, `IR`, `RE`, `OR` | Normal `bearing1_1`; inner-race fault `bearing1_3`; rolling-element fault `bearing1_4`; outer-race fault `bearing2_1`. |
+| `KAIST` | `N`, `RE`, `IR`, `OR` | Normal; rolling-element fault; inner-race fault; outer-race fault. The code reads `vibration_normal_*`, `vibration_ball_*`, `vibration_inner_*`, and `vibration_outer_*`; `KAIST1`, `KAIST2`, and `KAIST3` only correspond to different CSV subsets. |
+| `MFPT` | `N`, `OR1`-`OR3`, `ORv1`-`ORv7`, `IRv1`-`IRv7` | Normal; outer-race faults `OuterRaceFault_1`-`OuterRaceFault_3` and `OuterRaceFault_vload_1`-`OuterRaceFault_vload_7`; inner-race faults `InnerRaceFault_vload_1`-`InnerRaceFault_vload_7`. |
+| `PU` | `N-K001`, `OR-KA04`, `OR-KA15`, `OR-KA16`, `OR-KA22`, `OR-KA30`, `IR-KI16`, `IR-KI17`, `IR-KI18`, `IR-KI21`, `MIX-KB23`, `MIX-KB24`, `MIX-KB27`, `MIX-KI14` | Normal `K001`; outer-race faults `KA04` 2 x 3 mm, `KA15` <1 x <1 mm, `KA16` 2 x total mm and 3 x total mm, `KA22` <2 x 1 mm, `KA30` <1 x <1 mm; inner-race faults `KI16` 6 x total mm, `KI17` two 1 x 2 mm damages, `KI18` 2.5 x total mm, `KI21` 1 x 2 mm; inner-race + outer-race compound faults `KB23`, `KB24`, `KB27`, `KI14`. The code assigns labels by bearing ID, so different IDs remain different classes. |
+| `TORINO` | `N`, `IR450`, `IR250`, `IR150`, `RE450`, `RE250`, `RE150` | Normal `C0A`; inner-race faults `C1A` 450 um, `C2A` 250 um, `C3A` 150 um; rolling-element faults `C4A` 450 um, `C5A` 250 um, `C6A` 150 um. The code only uses `C0A`-`C6A` files and does not use `E4A` endurance files. |
+| `UO` | `N`, `IR`, `OR`, `RE`, `MIX` | Normal `healthy`; inner-race fault `inner`; outer-race fault `outer`; rolling-element fault `ball`; compound fault `combination`. |
+| `XJTUSY` | `OR-B1_1`, `OR-B1_2`, `OR-B1_3`, `OR-B2_2`, `OR-B2_4`, `OR-B2_5`, `OR-B3_1`, `OR-B3_5`, `IR-B2_1`, `IR-B3_3`, `IR-B3_4`, `CA-B1_4`, `CA-B2_3`, `MIX-B1_5`, `MIX-B3_2` | Outer-race faults `Bearing1_1`, `Bearing1_2`, `Bearing1_3`, `Bearing2_2`, `Bearing2_4`, `Bearing2_5`, `Bearing3_1`, `Bearing3_5`; inner-race faults `Bearing2_1`, `Bearing3_3`, `Bearing3_4`; cage faults `Bearing1_4`, `Bearing2_3`; inner-race + outer-race compound fault `Bearing1_5`; inner-race + outer-race + rolling-element + cage compound fault `Bearing3_2`. |
 
 ## 环境依赖
 
